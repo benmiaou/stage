@@ -1,6 +1,6 @@
-project(stage)
+project(stage CXX)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo")
@@ -18,8 +18,15 @@ include_directories( ${PROJECT_SOURCE_DIR}/src )
 # the list of source files
 set(Stage_SRCS
     src/Main.cpp
+src/MyWindow.cpp
+src/DICOMManager.cpp
 )
+set(MYPROJECT_CURRENT_HEADERS
+src/MyWindow.hpp
+src/DICOMManager.h
+)
+qt4_wrap_cpp(mocFiles ${MYPROJECT_CURRENT_HEADERS})
 
-add_executable(stage ${Stage_SRCS})
+add_executable(stage ${Stage_SRCS} ${mocFiles})
 
 target_link_libraries(stage ${QT_LIBRARIES} ${ITK_LIBRARIES})
