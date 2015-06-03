@@ -9,7 +9,7 @@
 #include <QMenuBar>
 #include <QLayout>
 #include <QSignalMapper>
-
+#include <iostream>
 #include <QStatusBar>
 
 
@@ -20,13 +20,13 @@ MyWindow::MyWindow()
 {
     createActions();
     createMenus();
- QFileDialog dialog(this);
+    QFileDialog dialog(this);
     myLabel = new QLabel(this);
     this->resize(800,800);
-   }
+}
 
 void MyWindow::createActions()
- {
+{
     newAct = new QAction(tr("&Open Directory"), this);
     newAct->setShortcuts(QKeySequence::New);
     newAct->setStatusTip(tr("Open a DICOM directory"));
@@ -36,26 +36,27 @@ void MyWindow::createActions()
 
 void MyWindow::openDirectory(){
     QString dir =  QFileDialog::getExistingDirectory();
-     actualDirectory = dir.toStdString();
- series = getSeries(actualDirectory);
- QMenu* seriesMenu = this->menuBar()->addMenu(tr("&Series"));
+    actualDirectory = dir.toStdString();
+    series = getSeries(actualDirectory);
+    QMenu* seriesMenu = this->menuBar()->addMenu(tr("&Series"));
 
- QSignalMapper* signalMapper = new QSignalMapper (this);
- for (int i =0; i< series.size(); i++){
-     QAction* newAction = new QAction(tr(series[i].c_str()), this);
+    QSignalMapper* signalMapper = new QSignalMapper (this);
+    for (int i =0; i< series.size(); i++){
+        QAction* newAction = new QAction(tr(series[i].c_str()), this);
 
-     newAction->setShortcuts(QKeySequence::New);
-     newAction->setStatusTip(tr("Open a DICOM serie"));
-     connect(newAction, SIGNAL(triggered()),signalMapper ,SLOT(map()));
-     signalMapper ->setMapping(newAction,i);
-     seriesMenu->addAction(newAction);
- }
- connect (signalMapper, SIGNAL(mapped(int)), this, SLOT(openSerie(int))) ;
+        newAction->setShortcuts(QKeySequence::New);
+        newAction->setStatusTip(tr("Open a DICOM serie"));
+        connect(newAction, SIGNAL(triggered()),signalMapper ,SLOT(map()));
+        signalMapper ->setMapping(newAction,i);
+        seriesMenu->addAction(newAction);
+    }
+    connect (signalMapper, SIGNAL(mapped(int)), this, SLOT(openSerie(int))) ;
 }
 
 
 void MyWindow::openSerie(int i){
     QtImages = getDICOMSerie(series[i],actualDirectory);
+    zoomFactor = 1;
     cpt = 0;
     QImage image_Qt = QtImages[0];
     myLabel->setPixmap(QPixmap::fromImage(image_Qt));
@@ -66,7 +67,7 @@ void MyWindow::openSerie(int i){
 
 void MyWindow::createMenus()
 {
-     fileMenu = this->menuBar()->addMenu(tr("&File"));
+    fileMenu = this->menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(newAct);
 
 }
@@ -74,19 +75,40 @@ void MyWindow::createMenus()
 
 void MyWindow::wheelEvent(QWheelEvent *event)
 {
-    int delta = event->delta() / 8;
-    if(cpt+1 >= QtImages.size())
-        cpt = 0;
-    else
+    if(event->modifiers().testFlag(Qt::ControlModifier)){
+        int delta = event->delta() / 8;
         if (delta > 0) {
-            cpt++;
+            zoomFactor += 0.1;
         } else {
-            if(cpt > 0)
-                cpt--;
+            if (zoomFactor > 1)
+            zoomFactor -= 0.1;
         }
-    QImage image_Qt = QtImages[cpt];
-    myLabel->setFixedSize(image_Qt.width(),image_Qt.height());
-    myLabel->setPixmap(QPixmap::fromImage(image_Qt));
-    this->resize(image_Qt.width(),image_Qt.height());
-    event->accept();
+
+        int posX = event->x();
+        int posY = event->y();
+        std::cout << posX << "      "<<posY <<std::endl;
+        QImage image_Qt = zoom(QtImages[cpt], zoomFactor,posX,posY);
+        myLabel->setFixedSize(image_Qt.width(),image_Qt.height());
+        myLabel->setPixmap(QPixmap::fromImage(image_Qt));
+        this->resize(image_Qt.width(),image_Qt.height());
+        event->accept();
+    }
+    else{
+        int delta = event->delta() / 8;
+        if(cpt+1 >= QtImages.size())
+            cpt = 0;
+        else
+            if (delta > 0) {
+                cpt++;
+            } else {
+                if(cpt > 0)
+                    cpt--;
+            }
+        zoomFactor = 1;
+        QImage image_Qt = QtImages[cpt];
+        myLabel->setFixedSize(image_Qt.width(),image_Qt.height());
+        myLabel->setPixmap(QPixmap::fromImage(image_Qt));
+        this->resize(image_Qt.width(),image_Qt.height());
+        event->accept();
+    }
 }

@@ -17,6 +17,7 @@ public:
     MyWindow();
 protected:
     int cpt;
+    double zoomFactor;
     QLabel* myLabel;
     std::vector<QImage> QtImages;
 std::vector<std::string> series;
