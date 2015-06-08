@@ -4,52 +4,48 @@
 #include "itkImage.h"
 #include "itkImageRegionConstIterator.h"
 #include "itkRescaleIntensityImageFilter.h"
-#include "itkCastImageFilter.h"
-#include "DICOMManager.h"
 #include "itkGDCMImageIO.h"
 #include "itkGDCMSeriesFileNames.h"
-#include "itkNumericSeriesFileNames.h"
-#include "itkRegionOfInterestImageFilter.h"
-#include "itkIdentityTransform.h"
-#include "itkBSplineInterpolateImageFunction.h"
 #include "itkResampleImageFilter.h"
+#include "itkCannyEdgeDetectionImageFilter.h"
+#include "itkIntensityWindowingImageFilter.h"
+#include "itkMinimumMaximumImageFilter.h"
+#include "itkRegionOfInterestImageFilter.h"
+#include "itkBSplineInterpolateImageFunction.h"
+#include "itkCastImageFilter.h"
+#include "itkConfidenceConnectedImageFilter.h"
+#include "itkAddImageFilter.h"
+#include "itkConnectedThresholdImageFilter.h"
+#include "itkGeodesicActiveContourLevelSetImageFilter.h"
+#include "itkCurvatureAnisotropicDiffusionImageFilter.h"
+#include "itkGradientMagnitudeRecursiveGaussianImageFilter.h"
+#include "itkBinaryBallStructuringElement.h"
+#include "itkBinaryDilateImageFilter.h"
+#include "itkInvertIntensityImageFilter.h"
+#include "itkSigmoidImageFilter.h"
+#include "itkFastMarchingImageFilter.h"
+#include "itkRescaleIntensityImageFilter.h"
+#include "itkBinaryThresholdImageFilter.h"
+#include "itkCurvatureFlowImageFilter.h"
+#include "itkMaskImageFilter.h"
+#include "itkVotingBinaryIterativeHoleFillingImageFilter.h"
 
 
-#include "itkImage.h"
-#include "itkImageFileWriter.h"
 
 
-
-
-
+#include "DICOMManager.hpp"
 #include <QImage>
 
-typedef signed short    PixelType;
-const unsigned int      Dimension = 2;
-typedef itk::Image< PixelType, Dimension >ImageType;
 
 template<typename TImage, typename TLabelImage>
-static void SummarizeLabelStatistics (TImage* image,
-                                      TLabelImage* labelImage);
+static void SummarizeLabelStatistics (TImage* image,TLabelImage* labelImage);
+const  unsigned int Dimension = 2;
 
-
-
-ImageType::Pointer loadDICOM(std::string filename){
-
-
-
-    typedef itk::Image< PixelType, Dimension >ImageType;
-    typedef itk::ImageSeriesReader< ImageType >        ReaderType;
-    ReaderType::Pointer reader = ReaderType::New();
-    typedef itk::GDCMImageIO       ImageIOType;
-    ImageIOType::Pointer dicomIO = ImageIOType::New();
-    reader->SetImageIO( dicomIO );
-    reader->SetFileName(filename);
-    reader->Update();
-    return reader->GetOutput();
+DICOMMManager::DICOMMManager(){
 }
 
-QImage ITKImageToQImage(ImageType::Pointer myITKImage){
+
+QImage DICOMMManager::ITKImageToQImage(ImageType::Pointer myITKImage){
     int wight = myITKImage->GetLargestPossibleRegion().GetSize()[0];
     int height = myITKImage->GetLargestPossibleRegion().GetSize()[1];
 
@@ -69,8 +65,8 @@ QImage ITKImageToQImage(ImageType::Pointer myITKImage){
     }
     return *image_Qt;
 }
-
-ImageType::Pointer QTimageToITKImage(QImage image){
+/*
+DICOMMManager::ImageType::Pointer DICOMMManager::QTimageToITKImage(QImage image){
     ImageType::Pointer myITKImage = ImageType::New();
     int wight = image.width();
     int height = image.height();
@@ -98,9 +94,112 @@ ImageType::Pointer QTimageToITKImage(QImage image){
     }
     return myITKImage;
 }
+*/
 
-ImageType::Pointer extractRegion(ImageType::Pointer src ,int startX,
-                                 int startY, int endX, int endY){
+DICOMMManager::ImageType::Pointer DICOMMManager::extractSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY){
+    typedef   float InternalPixelType;
+    typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
+    typedef itk::CastImageFilter< ImageType, InternalImageType > CastFilterTypeIn;
+    typedef itk::InvertIntensityImageFilter <InternalImageType>
+            InvertIntensityImageFilterType;
+    typedef itk::CastImageFilter< InternalImageType, ImageType > CastFilterTypeOut;
+    typedef itk::MaskImageFilter< InternalImageType, InternalImageType > MaskFilterType;
+    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+    CastFilterTypeIn::Pointer castFilterIn = CastFilterTypeIn::New();
+    CastFilterTypeOut::Pointer castFilterOut = CastFilterTypeOut::New();
+    InvertIntensityImageFilterType::Pointer invertIntensityFilter = InvertIntensityImageFilterType::New();
+    typedef itk::AddImageFilter <ImageType, ImageType >AddImageFilterType;
+
+    AddImageFilterType::Pointer addFilter = AddImageFilterType::New ();
+
+    typedef itk::CurvatureFlowImageFilter< InternalImageType, InternalImageType >CurvatureFlowImageFilterType;
+    CurvatureFlowImageFilterType::Pointer smoothing = CurvatureFlowImageFilterType::New();
+    typedef itk::BinaryBallStructuringElement<InternalImageType::PixelType, InternalImageType::ImageDimension>
+                StructuringElementType;
+    StructuringElementType structuringElement;
+    typedef itk::ConfidenceConnectedImageFilter<InternalImageType, InternalImageType> ConnectedFilterType;
+    ConnectedFilterType::Pointer confidenceConnected = ConnectedFilterType::New();
+    typedef itk::BinaryDilateImageFilter <InternalImageType, InternalImageType, StructuringElementType>
+             BinaryDilateImageFilterType;
+     BinaryDilateImageFilterType::Pointer dilateFilter
+             = BinaryDilateImageFilterType::New();
+     typedef itk::VotingBinaryIterativeHoleFillingImageFilter< InternalImageType > FilterType;
+     FilterType::Pointer fillHoleFilter = FilterType::New();
+     FilterType::InputSizeType radius;
+
+    InternalImageType::IndexType  index;
+    index[0] = seedPosX;
+    index[1] = seedPosY;
+
+    castFilterIn->SetInput(src);
+    castFilterIn->Update();
+
+    smoothing->SetInput( castFilterIn->GetOutput() );
+    smoothing->SetNumberOfIterations( 5 );
+    smoothing->SetTimeStep( 0.125 );
+    smoothing->Update();
+
+    confidenceConnected->SetMultiplier( 5 );
+    confidenceConnected->SetNumberOfIterations(5);
+    confidenceConnected->SetReplaceValue(255);
+    confidenceConnected->SetSeed( index );
+    confidenceConnected->SetInitialNeighborhoodRadius(2);
+    confidenceConnected->SetInput( smoothing->GetOutput() );
+    confidenceConnected->Update();
+
+
+    structuringElement.SetRadius(5);
+    structuringElement.CreateStructuringElement();
+    dilateFilter->SetInput(confidenceConnected->GetOutput());
+    dilateFilter->SetKernel(structuringElement);
+    dilateFilter->Update();
+
+    //BinaryFillHolaFilterType::InputSizeType radius;
+    radius.Fill( 20 );
+
+    fillHoleFilter->SetInput(dilateFilter->GetOutput());
+    fillHoleFilter->SetRadius( radius );
+    fillHoleFilter->SetMajorityThreshold( 2 );
+    fillHoleFilter->SetBackgroundValue( itk::NumericTraits< PixelType >::Zero );
+    fillHoleFilter->SetForegroundValue( itk::NumericTraits< PixelType >::max() );
+    fillHoleFilter->SetMaximumNumberOfIterations( 25 );
+    fillHoleFilter->Update();
+
+
+
+
+    maskFilter->SetInput(castFilterIn->GetOutput());
+    maskFilter->SetMaskImage(fillHoleFilter->GetOutput());
+    maskFilter->Update();
+
+    castFilterOut->SetInput(maskFilter->GetOutput());
+    castFilterOut->Update();
+    addFilter->SetInput1(enhanceContrast(castFilterOut->GetOutput()));
+
+
+    invertIntensityFilter->SetInput(fillHoleFilter->GetOutput());
+    invertIntensityFilter->SetMaximum(255);
+    invertIntensityFilter->Update();
+    maskFilter->SetInput(castFilterIn->GetOutput());
+    maskFilter->SetMaskImage(invertIntensityFilter->GetOutput());
+    maskFilter->Update();
+    castFilterOut->SetInput(maskFilter->GetOutput());
+    castFilterOut->Update();
+    addFilter->SetInput2(castFilterOut->GetOutput());
+
+
+    addFilter->Update();
+    //return addFilter->GetOutput();
+
+    castFilterOut->SetInput(fillHoleFilter->GetOutput());
+    castFilterOut->Update();
+    return castFilterOut->GetOutput();
+
+}
+
+
+DICOMMManager::ImageType::Pointer DICOMMManager::extractRegion(ImageType::Pointer src ,int startX,
+                                                               int startY, int endX, int endY){
     const itk::IndexValueType startx =
             static_cast< itk::IndexValueType >(startX);
     const itk::IndexValueType endx =
@@ -131,10 +230,40 @@ ImageType::Pointer extractRegion(ImageType::Pointer src ,int startX,
     return filter->GetOutput();
 }
 
+DICOMMManager::ImageType::Pointer  DICOMMManager::getEdges(ImageType::Pointer  src,int threshold){
+    typedef  float          InputPixelType;
+    typedef itk::Image<InputPixelType, Dimension>  InputImageType;
 
-QImage zoom(QImage image, double factor, int posX, int posY){
+    typedef itk::CastImageFilter< ImageType, InputImageType > CastFilterType;
+    CastFilterType::Pointer castFilter = CastFilterType::New();
+    castFilter->SetInput(src);
+    castFilter->Update();
 
-    ImageType::Pointer myITKImage = QTimageToITKImage(image);
+    typedef itk::CannyEdgeDetectionImageFilter< InputImageType, InputImageType >
+            FilterType;
+    FilterType::Pointer filter = FilterType::New();
+    filter->SetInput(castFilter->GetOutput());
+    filter->SetVariance(8);
+    filter->SetUpperThreshold(threshold);
+    filter->SetLowerThreshold(0);
+    filter->Update();
+
+    typedef itk::RescaleIntensityImageFilter< InputImageType, ImageType > RescaleType;
+    RescaleType::Pointer rescaler = RescaleType::New();
+    rescaler->SetInput(filter->GetOutput());
+    rescaler->SetOutputMinimum(0);
+    rescaler->SetOutputMaximum(255);
+    rescaler->Update();
+    return rescaler->GetOutput();
+
+}
+
+
+
+
+
+DICOMMManager::ImageType::Pointer DICOMMManager::zoom(ImageType::Pointer myITKImage, double factor, int posX, int posY){
+
     int wight = myITKImage->GetLargestPossibleRegion().GetSize()[0];
     int height = myITKImage->GetLargestPossibleRegion().GetSize()[1];
     int hWight = wight/2;
@@ -173,18 +302,16 @@ QImage zoom(QImage image, double factor, int posX, int posY){
     itk::Size<2> vnOutputSize = { {nNewWidth, nNewHeight} };
     _pResizeFilter->SetSize(vnOutputSize);
     _pResizeFilter->SetInput(myITKImage);
-     _pResizeFilter->UpdateLargestPossibleRegion();
+    _pResizeFilter->UpdateLargestPossibleRegion();
     _pResizeFilter->Update();
     myITKImage = _pResizeFilter->GetOutput();
     myITKImage->Update();
     myITKImage = extractRegion(myITKImage ,0,0, wight-1, height-1);
     myITKImage->Update();
-    return ITKImageToQImage(myITKImage);
+    return myITKImage;
 }
 
-
-ImageType::Pointer enhanceLungContrast(ImageType::Pointer myITKImage){
-
+DICOMMManager::ImageType::Pointer DICOMMManager::rescale(ImageType::Pointer myITKImage){
     typedef itk::RescaleIntensityImageFilter< ImageType, ImageType >
             RescaleFilterType;
     RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
@@ -196,14 +323,35 @@ ImageType::Pointer enhanceLungContrast(ImageType::Pointer myITKImage){
 }
 
 
-QImage getDICOM(std::string filename){
-    ImageType::Pointer myITKImage = loadDICOM(filename);
-    myITKImage = enhanceLungContrast(myITKImage);
-    return ITKImageToQImage(myITKImage);
+DICOMMManager::ImageType::Pointer DICOMMManager::getImageFromSerie(int num){
+    ImageType::Pointer Null;
+    if(num < actualSerie.size() && num >= 0)
+        return actualSerie[num];
+    return Null;
+}
+
+DICOMMManager::ImageType::Pointer DICOMMManager::enhanceContrast(ImageType::Pointer myITKImage){
+    typedef itk::IntensityWindowingImageFilter <ImageType, ImageType> IntensityWindowingImageFilterType;
+    typedef itk::MinimumMaximumImageCalculator <ImageType>
+            ImageCalculatorFilterType;
+    ImageCalculatorFilterType::Pointer imageCalculatorFilter
+            = ImageCalculatorFilterType::New ();
+    imageCalculatorFilter->SetImage(myITKImage);
+    imageCalculatorFilter->Compute();
+    IntensityWindowingImageFilterType::Pointer filter = IntensityWindowingImageFilterType::New();
+    filter->SetInput(myITKImage);
+    filter->SetWindowMinimum(imageCalculatorFilter->GetMinimum());
+    filter->SetWindowMaximum(imageCalculatorFilter->GetMaximum()+5);
+    filter->SetOutputMinimum(0);
+    filter->SetOutputMaximum(255);
+    filter->Update();
+
+    return filter->GetOutput();
 }
 
 
-std::vector<std::string> getSeries(std::string directoryName){
+
+std::vector<std::string> DICOMMManager::getSeries(std::string directoryName){
     typedef itk::GDCMSeriesFileNames NamesGeneratorType;
     typedef itk::ImageFileReader< ImageType >     ReaderType;
     typedef std::vector< std::string >    SeriesIdContainer;
@@ -224,8 +372,9 @@ std::vector<std::string> getSeries(std::string directoryName){
     }
     return series;
 }
-std::vector<QImage> getDICOMSerie(std::string seriesIdentifier,
-                                  std::string directoryName){
+
+void DICOMMManager::loadDICOMSerie(std::string seriesIdentifier,
+                                   std::string directoryName){
 
     typedef itk::ImageSeriesReader< ImageType >        ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
@@ -245,10 +394,10 @@ std::vector<QImage> getDICOMSerie(std::string seriesIdentifier,
 
     nameGenerator->SetUseSeriesDetails( true );
     nameGenerator->SetDirectory(directoryName);
-    std::vector<QImage> images_Qt;
     typedef std::vector< std::string >   FileNamesContainer;
     FileNamesContainer fileNames;
     fileNames = nameGenerator->GetFileNames(seriesIdentifier);
+    actualSerie.clear();
     for (int i =0; i< fileNames.size(); i++){
         std::cout << fileNames[i] << std::endl;
         reader->SetFileName(fileNames[i]);
@@ -289,53 +438,8 @@ std::vector<QImage> getDICOMSerie(std::string seriesIdentifier,
 
         //--------------------------------------------------
         ImageType::Pointer myITKImage = reader->GetOutput();
-        myITKImage = enhanceLungContrast(myITKImage);
-        QImage image_Qt =  ITKImageToQImage(myITKImage);
-        images_Qt.push_back(image_Qt);
+        myITKImage = rescale(myITKImage);
+        actualSerie.push_back(myITKImage);
     }
-    return images_Qt;
-}
 
-
-
-std::vector<QImage> getDICOMDirectory(std::string directoryName){
-    typedef itk::GDCMImageIO       ImageIOType;
-    ImageIOType::Pointer dicomIO = ImageIOType::New();
-    typedef itk::ImageSeriesReader< ImageType >        ReaderType;
-    ReaderType::Pointer reader = ReaderType::New();
-
-
-    typedef itk::GDCMSeriesFileNames NamesGeneratorType;
-    NamesGeneratorType::Pointer nameGenerator = NamesGeneratorType::New();
-    nameGenerator->SetUseSeriesDetails( true );
-    nameGenerator->SetDirectory(directoryName);
-
-    typedef std::vector< std::string >    SeriesIdContainer;
-    const SeriesIdContainer & seriesUID = nameGenerator->GetSeriesUIDs();
-    SeriesIdContainer::const_iterator seriesItr = seriesUID.begin();
-    SeriesIdContainer::const_iterator seriesEnd = seriesUID.end();
-    std::string seriesIdentifier;
-    typedef std::vector< std::string >   FileNamesContainer;
-    FileNamesContainer fileNames;
-    reader->SetImageIO( dicomIO );
-    std::vector<QImage> images_Qt;
-    while( seriesItr != seriesEnd )
-    {
-        seriesIdentifier = seriesItr->c_str();
-        fileNames = nameGenerator->GetFileNames(seriesIdentifier);
-        for (int i =0; i< fileNames.size(); i++){
-            std::cout << fileNames[i] << std::endl;
-            reader->SetFileName(fileNames[i]);
-            reader->UpdateLargestPossibleRegion();
-            reader->Update();
-            ImageType::Pointer myITKImage = reader->GetOutput();
-            myITKImage = enhanceLungContrast(myITKImage);
-            myITKImage->UpdateOutputData();
-            myITKImage->UpdateOutputInformation();
-            QImage image_Qt =  ITKImageToQImage(myITKImage);
-            images_Qt.push_back(image_Qt);
-        }
-        seriesItr++;
-    }
-    return images_Qt;
 }

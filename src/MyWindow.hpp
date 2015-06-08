@@ -9,6 +9,10 @@
 #include <QFileDialog>
 #include <QWidget>
 #include <QObject>
+#include <QSplashScreen>
+#include "MyLabel.hpp"
+#include "Controller.hpp"
+
 
 class MyWindow : public QMainWindow
 {
@@ -17,27 +21,39 @@ public:
     MyWindow();
 protected:
     int cpt;
-    double zoomFactor;
+    Controller *controller;
+    std::vector<std::string> series;
+    std::string actualDirectory;
     QLabel* myLabel;
-    std::vector<QImage> QtImages;
-std::vector<std::string> series;
-std::string actualDirectory;
+    MyLabel* myDrawer;
     void wheelEvent(QWheelEvent *event);
+    void keyPressEvent(QKeyEvent *event);
+    void resizeEvent(QResizeEvent * event);
 
 
 
-//void contextMenuEvent(QContextMenuEvent *event);
-QActionGroup *alignmentGroup;
-      QMenu *fileMenu;
-       QAction *newAct;
+QSize actualSize;
+    QSplashScreen *splash;
+    QActionGroup *alignmentGroup;
+    QMenu *fileMenu;
+    QMenu *seriesMenu;
+    QMenu *processMenu;
+    QAction *newAct;
+    QAction *edgesAct;
+    QAction *zoneAct;
+    QAction *contrastAct;
+    QAction *selectRegion;
     QLabel *infoLabel;
+    QTimer *m_timer;
 
 private :
+    void refreshImage(int cpt);
     void createActions();
     void createMenus();
 private slots :
     void openDirectory();
     void openSerie(int);
+    void refreshBool();
 };
 
 

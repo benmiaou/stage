@@ -7,6 +7,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 find_package(Qt4 REQUIRED)
 include(${QT_USE_FILE})
@@ -20,10 +21,14 @@ set(Stage_SRCS
     src/Main.cpp
 src/MyWindow.cpp
 src/DICOMManager.cpp
+src/MyLabel.cpp
+src/Controller.cpp
 )
 set(MYPROJECT_CURRENT_HEADERS
 src/MyWindow.hpp
-src/DICOMManager.h
+src/DICOMManager.hpp
+src/MyLabel.hpp
+src/Controller.hpp
 )
 qt4_wrap_cpp(mocFiles ${MYPROJECT_CURRENT_HEADERS})
 
