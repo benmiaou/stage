@@ -17,18 +17,20 @@ public :
     QImage ITKImageToQImage(ImageType::Pointer myITKImage);
 
     ImageType::Pointer getImageFromSerie(int num);
-    ImageType::Pointer zoom(ImageType::Pointer image, double factor, int posX, int posY);
+
     ImageType::Pointer enhanceContrast(ImageType::Pointer myITKImage);
     ImageType::Pointer extractRegion(ImageType::Pointer src ,int startX,int startY, int endX, int endY);
     ImageType::Pointer  getEdges(ImageType::Pointer  src,int threshold);
-    ImageType::Pointer extractSelectedRegion(ImageType::Pointer src ,int startX,int startY);
+    ImageType::Pointer enhanceSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
+    ImageType::Pointer extractBronchiInRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
+
 
 private :
 
     ImageType::Pointer rescale(ImageType::Pointer myITKImage);
-
-
-
+ImageType::Pointer zoom(ImageType::Pointer image, double factor, int posX, int posY);
+    ImageType::Pointer fillHoleInBinary(ImageType::Pointer src, int sizeMax);
+    ImageType::Pointer extractSelectedRegion(ImageType::Pointer src ,int startX,int startY);
 
     std::vector<ImageType::Pointer> actualSerie;
     ImageType::Pointer loadDICOM(std::string filename);

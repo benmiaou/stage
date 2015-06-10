@@ -29,6 +29,8 @@
 #include "itkCurvatureFlowImageFilter.h"
 #include "itkMaskImageFilter.h"
 #include "itkVotingBinaryIterativeHoleFillingImageFilter.h"
+#include "itkSubtractImageFilter.h"
+#include "itkImageDuplicator.h"
 
 
 
@@ -65,6 +67,75 @@ QImage DICOMMManager::ITKImageToQImage(ImageType::Pointer myITKImage){
     }
     return *image_Qt;
 }
+
+DICOMMManager::ImageType::Pointer DICOMMManager::fillHoleInBinary(ImageType::Pointer src, int sizeMax){
+    int wight = src->GetLargestPossibleRegion().GetSize()[0];
+    int height = src->GetLargestPossibleRegion().GetSize()[1];
+    typedef itk::ImageDuplicator< ImageType > DuplicatorType;
+    DuplicatorType::Pointer duplicator = DuplicatorType::New();
+    duplicator->SetInputImage(src);
+    duplicator->Update();
+    ImageType::Pointer dest =  duplicator->GetOutput();
+    std::vector<ImageType::IndexType> indexs;
+    for(unsigned int i = 0; i < wight; i++)
+    {
+        bool alreadyPassIn = false;
+        indexs.clear();
+        for(unsigned int j = 0; j < height; j++)
+        {
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            int pixelValue = src->GetPixel(pixelIndex);
+            if(pixelValue == 255){
+                if(indexs.size() > sizeMax)
+                    indexs.clear();
+                for(int k =0; k < indexs.size(); k++){
+                    dest->SetPixel(indexs[k],255);
+                }
+                indexs.clear();
+                if(!alreadyPassIn)
+                    alreadyPassIn = true;
+                dest->SetPixel(pixelIndex,255);
+            }
+            else{
+                if(alreadyPassIn)
+                    indexs.push_back(pixelIndex);
+                dest->SetPixel(pixelIndex,0);
+            }
+        }
+    }
+    for(unsigned int j = 0; j < height; j++)
+    {
+        bool alreadyPassIn = false;
+        indexs.clear();
+        for(unsigned int i = 0; i < wight; i++)
+        {
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            int pixelValue = dest->GetPixel(pixelIndex);
+            if(pixelValue == 255){
+                if(indexs.size() > sizeMax)
+                    indexs.clear();
+                for(int k =0; k < indexs.size(); k++){
+                    dest->SetPixel(indexs[k],255);
+                }
+                indexs.clear();
+                if(!alreadyPassIn)
+                    alreadyPassIn = true;
+                dest->SetPixel(pixelIndex,255);
+            }
+            else{
+                if(alreadyPassIn)
+                    indexs.push_back(pixelIndex);
+                dest->SetPixel(pixelIndex,0);
+            }
+        }
+    }
+    return dest;
+}
+
 /*
 DICOMMManager::ImageType::Pointer DICOMMManager::QTimageToITKImage(QImage image){
     ImageType::Pointer myITKImage = ImageType::New();
@@ -100,33 +171,13 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractSelectedRegion(ImageType
     typedef   float InternalPixelType;
     typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
     typedef itk::CastImageFilter< ImageType, InternalImageType > CastFilterTypeIn;
-    typedef itk::InvertIntensityImageFilter <InternalImageType>
-            InvertIntensityImageFilterType;
     typedef itk::CastImageFilter< InternalImageType, ImageType > CastFilterTypeOut;
-    typedef itk::MaskImageFilter< InternalImageType, InternalImageType > MaskFilterType;
-    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
     CastFilterTypeIn::Pointer castFilterIn = CastFilterTypeIn::New();
     CastFilterTypeOut::Pointer castFilterOut = CastFilterTypeOut::New();
-    InvertIntensityImageFilterType::Pointer invertIntensityFilter = InvertIntensityImageFilterType::New();
-    typedef itk::AddImageFilter <ImageType, ImageType >AddImageFilterType;
-
-    AddImageFilterType::Pointer addFilter = AddImageFilterType::New ();
-
     typedef itk::CurvatureFlowImageFilter< InternalImageType, InternalImageType >CurvatureFlowImageFilterType;
     CurvatureFlowImageFilterType::Pointer smoothing = CurvatureFlowImageFilterType::New();
-    typedef itk::BinaryBallStructuringElement<InternalImageType::PixelType, InternalImageType::ImageDimension>
-                StructuringElementType;
-    StructuringElementType structuringElement;
     typedef itk::ConfidenceConnectedImageFilter<InternalImageType, InternalImageType> ConnectedFilterType;
     ConnectedFilterType::Pointer confidenceConnected = ConnectedFilterType::New();
-    typedef itk::BinaryDilateImageFilter <InternalImageType, InternalImageType, StructuringElementType>
-             BinaryDilateImageFilterType;
-     BinaryDilateImageFilterType::Pointer dilateFilter
-             = BinaryDilateImageFilterType::New();
-     typedef itk::VotingBinaryIterativeHoleFillingImageFilter< InternalImageType > FilterType;
-     FilterType::Pointer fillHoleFilter = FilterType::New();
-     FilterType::InputSizeType radius;
-
     InternalImageType::IndexType  index;
     index[0] = seedPosX;
     index[1] = seedPosY;
@@ -147,54 +198,73 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractSelectedRegion(ImageType
     confidenceConnected->SetInput( smoothing->GetOutput() );
     confidenceConnected->Update();
 
+    castFilterOut->SetInput(confidenceConnected->GetOutput());
+    castFilterOut->Update();
 
-    structuringElement.SetRadius(5);
+    return castFilterOut->GetOutput();
+
+}
+DICOMMManager::ImageType::Pointer DICOMMManager::enhanceSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY){
+    typedef itk::AddImageFilter <ImageType, ImageType >AddImageFilterType;
+    AddImageFilterType::Pointer addFilter = AddImageFilterType::New ();
+    typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
+            StructuringElementType;
+    StructuringElementType structuringElement;
+    typedef itk::BinaryDilateImageFilter <ImageType, ImageType, StructuringElementType> BinaryDilateImageFilterType;
+    BinaryDilateImageFilterType::Pointer dilateFilter  = BinaryDilateImageFilterType::New();
+    typedef itk::InvertIntensityImageFilter <ImageType> InvertIntensityImageFilterType;
+    InvertIntensityImageFilterType::Pointer invertIntensityFilter = InvertIntensityImageFilterType::New();
+    typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
+    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+
+
+    ImageType::Pointer selectRegion = extractSelectedRegion(src , seedPosX, seedPosY);
+
+    /*structuringElement.SetRadius(25);
     structuringElement.CreateStructuringElement();
     dilateFilter->SetInput(confidenceConnected->GetOutput());
     dilateFilter->SetKernel(structuringElement);
-    dilateFilter->Update();
-
-    //BinaryFillHolaFilterType::InputSizeType radius;
-    radius.Fill( 20 );
-
-    fillHoleFilter->SetInput(dilateFilter->GetOutput());
-    fillHoleFilter->SetRadius( radius );
-    fillHoleFilter->SetMajorityThreshold( 2 );
-    fillHoleFilter->SetBackgroundValue( itk::NumericTraits< PixelType >::Zero );
-    fillHoleFilter->SetForegroundValue( itk::NumericTraits< PixelType >::max() );
-    fillHoleFilter->SetMaximumNumberOfIterations( 25 );
-    fillHoleFilter->Update();
+    dilateFilter->Update();*/
 
 
+    ImageType::Pointer regionWithoutHole = fillHoleInBinary(selectRegion,30);
 
-
-    maskFilter->SetInput(castFilterIn->GetOutput());
-    maskFilter->SetMaskImage(fillHoleFilter->GetOutput());
+    maskFilter->SetInput(src);
+    maskFilter->SetMaskImage(regionWithoutHole);
     maskFilter->Update();
+    addFilter->SetInput1(enhanceContrast(rescale(maskFilter->GetOutput())));
 
-    castFilterOut->SetInput(maskFilter->GetOutput());
-    castFilterOut->Update();
-    addFilter->SetInput1(enhanceContrast(castFilterOut->GetOutput()));
-
-
-    invertIntensityFilter->SetInput(fillHoleFilter->GetOutput());
+    invertIntensityFilter->SetInput(regionWithoutHole);
     invertIntensityFilter->SetMaximum(255);
     invertIntensityFilter->Update();
-    maskFilter->SetInput(castFilterIn->GetOutput());
+    maskFilter->SetInput(src);
     maskFilter->SetMaskImage(invertIntensityFilter->GetOutput());
     maskFilter->Update();
-    castFilterOut->SetInput(maskFilter->GetOutput());
-    castFilterOut->Update();
-    addFilter->SetInput2(castFilterOut->GetOutput());
-
+    addFilter->SetInput2(rescale(maskFilter->GetOutput()));
 
     addFilter->Update();
-    //return addFilter->GetOutput();
 
-    castFilterOut->SetInput(fillHoleFilter->GetOutput());
-    castFilterOut->Update();
-    return castFilterOut->GetOutput();
+    return addFilter->GetOutput();
+}
 
+DICOMMManager::ImageType::Pointer DICOMMManager::extractBronchiInRegion(ImageType::Pointer src ,int seedPosX,int seedPosY){
+    typedef itk::SubtractImageFilter <ImageType, ImageType >  SubtractImageFilterType;
+    SubtractImageFilterType::Pointer subtractFilter = SubtractImageFilterType::New ();
+    typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
+    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+
+    ImageType::Pointer selectRegion = extractSelectedRegion(src , seedPosX, seedPosY);
+    ImageType::Pointer regionWithoutHole = fillHoleInBinary(selectRegion,30);
+
+    subtractFilter->SetInput1(regionWithoutHole);
+    subtractFilter->SetInput2(selectRegion);
+    subtractFilter->Update();
+
+    maskFilter->SetInput(src);
+    maskFilter->SetMaskImage(subtractFilter->GetOutput());
+    maskFilter->Update();
+
+    return enhanceContrast(rescale(maskFilter->GetOutput()));
 }
 
 
@@ -208,6 +278,10 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractRegion(ImageType::Pointe
             static_cast< itk::IndexValueType >(startY);
     const itk::IndexValueType endy =
             static_cast< itk::IndexValueType >(endY);
+    int width = src->GetLargestPossibleRegion().GetSize()[0];
+    int height = src->GetLargestPossibleRegion().GetSize()[1];
+    float ratio = 1;
+
 
     ImageType::IndexType start;
     start[0] = startx;
@@ -216,6 +290,10 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractRegion(ImageType::Pointe
     ImageType::IndexType end;
     end[0] = endx;
     end[1] = endy;
+
+    int centerX = startx + (endx-startx)/2;
+    int centerY = starty + (endy-starty)/2;
+
 
     ImageType::RegionType region;
     region.SetIndex(start);
@@ -227,7 +305,19 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractRegion(ImageType::Pointe
     filter->SetRegionOfInterest(region);
     filter->UpdateLargestPossibleRegion();
     filter->Update();
-    return filter->GetOutput();
+
+    ImageType::Pointer dest = filter->GetOutput();
+    int destWidth = dest->GetLargestPossibleRegion().GetSize()[0];
+    int destHeight = dest->GetLargestPossibleRegion().GetSize()[1];
+    if(destWidth > destHeight)
+        ratio = ((float)width/destWidth);
+    else
+        ratio = ((float)height/destHeight);
+    dest->Update();
+    std::cout << "ratio : "<< ratio <<" W "<<   destWidth   <<" H "<<  destHeight   <<std::endl;
+    dest = zoom(filter->GetOutput(),ratio,dest->GetOrigin()[0],dest->GetOrigin()[1]);
+    dest->Update();
+    return dest;
 }
 
 DICOMMManager::ImageType::Pointer  DICOMMManager::getEdges(ImageType::Pointer  src,int threshold){
@@ -254,6 +344,7 @@ DICOMMManager::ImageType::Pointer  DICOMMManager::getEdges(ImageType::Pointer  s
     rescaler->SetOutputMinimum(0);
     rescaler->SetOutputMaximum(255);
     rescaler->Update();
+
     return rescaler->GetOutput();
 
 }
@@ -282,7 +373,7 @@ DICOMMManager::ImageType::Pointer DICOMMManager::zoom(ImageType::Pointer myITKIm
     T_ResampleFilter::Pointer _pResizeFilter = T_ResampleFilter::New();
     _pResizeFilter->SetTransform(_pTransform);
     _pResizeFilter->SetInterpolator(_pInterpolator);
-    const double vfOutputOrigin[2]  = {posX/2, posY/2};
+    const double vfOutputOrigin[2]  = {posX, posY};
     _pResizeFilter->SetOutputOrigin(vfOutputOrigin);
     unsigned int nNewWidth = (int)(wight*factor);
     unsigned int nNewHeight =(int)(height*factor);
@@ -304,11 +395,11 @@ DICOMMManager::ImageType::Pointer DICOMMManager::zoom(ImageType::Pointer myITKIm
     _pResizeFilter->SetInput(myITKImage);
     _pResizeFilter->UpdateLargestPossibleRegion();
     _pResizeFilter->Update();
-    myITKImage = _pResizeFilter->GetOutput();
-    myITKImage->Update();
-    myITKImage = extractRegion(myITKImage ,0,0, wight-1, height-1);
-    myITKImage->Update();
-    return myITKImage;
+    // myITKImage = _pResizeFilter->GetOutput();
+    //myITKImage->Update();
+    //myITKImage = extractRegion(myITKImage ,0,0, wight-1, height-1);
+    //myITKImage->Update();
+    return _pResizeFilter->GetOutput();
 }
 
 DICOMMManager::ImageType::Pointer DICOMMManager::rescale(ImageType::Pointer myITKImage){
@@ -340,8 +431,8 @@ DICOMMManager::ImageType::Pointer DICOMMManager::enhanceContrast(ImageType::Poin
     imageCalculatorFilter->Compute();
     IntensityWindowingImageFilterType::Pointer filter = IntensityWindowingImageFilterType::New();
     filter->SetInput(myITKImage);
-    filter->SetWindowMinimum(imageCalculatorFilter->GetMinimum());
-    filter->SetWindowMaximum(imageCalculatorFilter->GetMaximum()+5);
+    filter->SetWindowMinimum(imageCalculatorFilter->GetMinimum()+1);
+    filter->SetWindowMaximum(imageCalculatorFilter->GetMaximum());
     filter->SetOutputMinimum(0);
     filter->SetOutputMaximum(255);
     filter->Update();

@@ -43,6 +43,7 @@ QSize actualSize;
     QAction *zoneAct;
     QAction *contrastAct;
     QAction *selectRegion;
+    QAction *selectBronchi;
     QLabel *infoLabel;
     QTimer *m_timer;
 
@@ -50,10 +51,12 @@ private :
     void refreshImage(int cpt);
     void createActions();
     void createMenus();
+
 private slots :
     void openDirectory();
     void openSerie(int);
     void refreshBool();
+     void ShowContextMenu(const QPoint& pos);
 };
 
 

@@ -32,6 +32,9 @@ MyWindow::MyWindow()
     QPalette p(myDrawer->palette());
     p.setColor(QPalette::Background, bg_color);
     myDrawer->setPalette(p);
+    this->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this, SIGNAL(customContextMenuRequested(const QPoint&)),
+            this, SLOT(ShowContextMenu(const QPoint&)));
 }
 
 void MyWindow::createActions()
@@ -51,25 +54,30 @@ void MyWindow::createActions()
     connect(zoneAct, SIGNAL(triggered()),this ,SLOT(refreshBool()));
 
     contrastAct = new QAction(tr("&Enhance Contrast"), this);
-    contrastAct->setStatusTip(tr("Enhance Contrast"));
+    contrastAct->setStatusTip(tr("enhance global contrast"));
     contrastAct->setCheckable(true);
     connect(contrastAct, SIGNAL(triggered()),this ,SLOT(refreshBool()));
 
     selectRegion = new QAction(tr("&Enhance Region"), this);
-    selectRegion->setStatusTip(tr("Enhance Region"));
+    selectRegion->setStatusTip(tr("enhance contrast in region"));
     selectRegion->setCheckable(true);
     connect(selectRegion, SIGNAL(triggered()),this ,SLOT(refreshBool()));
+
+    selectBronchi = new QAction(tr("&selectBronchi"), this);
+    selectBronchi->setStatusTip(tr("show bronchi in region"));
+    selectBronchi->setCheckable(true);
+    connect(selectBronchi, SIGNAL(triggered()),this ,SLOT(refreshBool()));
 }
 void MyWindow::refreshBool (){
-    controller->refreshBool(edgesAct->isChecked(),zoneAct->isChecked(),contrastAct->isChecked(),selectRegion->isChecked());
+    controller->refreshBool(edgesAct->isChecked(),zoneAct->isChecked(),contrastAct->isChecked(),selectRegion->isChecked(),selectBronchi->isChecked());
     refreshImage(cpt);
 }
 
 void MyWindow::resizeEvent (QResizeEvent * event){
     refreshImage(cpt);
-      if(myLabel->pixmap() != NULL){
+    if(myLabel->pixmap() != NULL){
         float ratio = (float)actualSize.height()/myLabel->pixmap()->height();
-            myDrawer->setRatio(ratio);
+        myDrawer->setRatio(ratio);
     }
 }
 
@@ -111,7 +119,7 @@ void MyWindow::openSerie(int i){
     splash->finish(this);
     myDrawer->isSelectable = true;
     zoneAct->setChecked(false);
-    controller->refreshBool(edgesAct->isChecked(),zoneAct->isChecked(),contrastAct->isChecked(),selectRegion->isChecked());
+    refreshBool ();
     QImage image_Qt = controller->getDicom(0,1);
     actualSize = image_Qt.size();
     controller->resetZoom();
@@ -126,11 +134,13 @@ void MyWindow::refreshImage(int num){
     if(myLabel->pixmap() != NULL){
         QImage image_Qt = myLabel->pixmap()->toImage();
         if (!image_Qt.isNull()){
+            float ratio = 1;
             myDrawer->show = !zoneAct->isChecked();
             myDrawer->isSelectable = !zoneAct->isChecked();
-
-            float ratio = (float)actualSize.height()/myLabel->pixmap()->height();
-            std::cout << "ratio : "<< ratio << std::endl;
+            if(myLabel->pixmap()->height() > myLabel->pixmap()->width())
+                ratio = (float)actualSize.height()/myLabel->pixmap()->height();
+            else
+                ratio = (float)actualSize.width()/myLabel->pixmap()->width();
             int x1,y1,x2,y2;
             myDrawer->selectedRectangle.getCoords(&x1,&y1,&x2,&y2);
             controller->refreshZone(x1,y1,x2,y2);
@@ -194,3 +204,26 @@ void MyWindow::wheelEvent(QWheelEvent *event)
         event->accept();
     }
 }
+
+void MyWindow::ShowContextMenu(const QPoint& pos)
+{
+    QPoint globalPos = this->mapToGlobal(pos);
+    controller->refreshMousePos(myLabel->mapFromGlobal(globalPos).x(),myLabel->mapFromGlobal(globalPos).y());
+
+    QMenu myMenu;
+    myMenu.addAction(selectRegion);
+    myMenu.addAction(zoneAct);
+    myMenu.addAction(selectBronchi);
+
+    QAction* selectedItem = myMenu.exec(globalPos);
+    if (selectedItem)
+    {
+
+    }
+    else
+    {
+
+    }
+}
+
+

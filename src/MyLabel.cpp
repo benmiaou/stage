@@ -44,7 +44,7 @@ void MyLabel::paintEvent(QPaintEvent *event)
             QPainter painter(this);
             painter.setRenderHint(QPainter::Antialiasing);
             painter.setPen(Qt::black);
-             P2 = this->mapFromGlobal(QCursor::pos())*ratio;
+            P2 = this->mapFromGlobal(QCursor::pos())*ratio;
             selectedRectangle = QRect(P1, P2);
             setRatio(ratio);
             painter.drawRect(selectedRectangle);
@@ -59,11 +59,15 @@ void MyLabel::paintEvent(QPaintEvent *event)
 
 }
 void MyLabel::mousePressEvent(QMouseEvent *event){
-    P1 = event->pos()*ratio;
-    isDrawing = true;
+    if(event->buttons() == Qt::LeftButton && event->modifiers().testFlag(Qt::ShiftModifier)){
+        P1 = event->pos()*ratio;
+        isDrawing = true;
+    }
 }
 
 void MyLabel::mouseReleaseEvent(QMouseEvent *event){
-    P2 = event->pos()*ratio;
-    isDrawing = false;
+    if(isDrawing){
+        P2 = event->pos()*ratio;
+        isDrawing = false;
+    }
 }

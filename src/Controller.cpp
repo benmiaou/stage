@@ -6,7 +6,7 @@
 Controller::Controller(){
     mDicom = new DICOMMManager();
     edge = zone = contrast = false;
-    x1 = x2 = y1 = y2 = 0;
+    x1 = x2 = y1 = y2 = mouseX = mouseY = 0;
     threshold = 1;
 
 }
@@ -16,11 +16,12 @@ void Controller::changeThreshold (int thresholdModifier){
         threshold += thresholdModifier;
 }
 
-void Controller::refreshBool(bool edge, bool zone ,bool contrast, bool selectRegion){
+void Controller::refreshBool(bool edge, bool zone , bool contrast, bool selectRegion, bool selectBronchi){
     this->edge = edge;
     this->zone = zone;
     this->contrast = contrast;
     this->selectRegion = selectRegion;
+    this->selectBronchi = selectBronchi;
 }
 
 void Controller::loadDICOMSerie(std::string seriesIdentifier,std::string directoryName){
@@ -35,11 +36,16 @@ std::vector<std::string> Controller::getSeries(std::string directoryName){
 
 }
 
-void Controller::refreshZoom(double zoomModifier, int posY, int posX){
+void Controller::refreshZoom(double zoomModifier, int posX, int posY){
     this->posX = posX;
     this->posY = posY;
     if(zoomFactor + zoomModifier> 1)
         zoomFactor += zoomModifier;
+}
+
+void Controller::refreshMousePos(int posX, int posY){
+    mouseX = posX;
+    mouseY = posY;
 }
 
 void Controller::refreshZone(int x1, int y1, int x2, int y2){
@@ -59,6 +65,7 @@ void Controller::resetZoom(){
 QImage Controller::getDicom(int num,float ratio){
 
     QImage null;
+    std::cout << "Rectangle pos : "<< x1*ratio <<" : "<< y1*ratio <<" : "<<x2*ratio <<" : "<< y2*ratio <<std::endl;
     DICOMMManager::ImageType::Pointer mItkImage = mDicom->getImageFromSerie(num);
     if (mItkImage.IsNotNull()){
         if(zone)
@@ -69,11 +76,18 @@ QImage Controller::getDicom(int num,float ratio){
                     mItkImage = mDicom->extractRegion(mItkImage,x1*ratio,y1*ratio,x2*ratio,y2*ratio);
             }
         if(selectRegion)
-            if(x1 >= 0 && y1 >= 0){
+            if(mouseX >= 0 && mouseY >= 0){
                 int wight = mItkImage->GetLargestPossibleRegion().GetSize()[0];
                 int height = mItkImage->GetLargestPossibleRegion().GetSize()[1];
-                if(x1*ratio < wight && y1*ratio < height)
-                    mItkImage = mDicom->extractSelectedRegion(mItkImage,x1*ratio,y1*ratio);
+                if(mouseX*ratio < wight && mouseY*ratio < height)
+                    mItkImage = mDicom->enhanceSelectedRegion(mItkImage,mouseX*ratio,mouseY*ratio);
+            }
+        if(selectBronchi)
+            if(mouseX >= 0 && mouseY >= 0){
+                int wight = mItkImage->GetLargestPossibleRegion().GetSize()[0];
+                int height = mItkImage->GetLargestPossibleRegion().GetSize()[1];
+                if(mouseX*ratio < wight && mouseY*ratio < height)
+                    mItkImage = mDicom->extractBronchiInRegion(mItkImage,mouseX*ratio,mouseY*ratio);
             }
         if(contrast)
             mItkImage = mDicom->enhanceContrast(mItkImage);
