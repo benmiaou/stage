@@ -20,9 +20,9 @@ Processing Menu :
 Commands :
  - <kbd>Shift</kbd> + left click : Place a rectangle zone.
  - Right click : Menu :
-  -Enhance Region = Enhance contrast in the region under the cursor.
-  -Select Zone = Zoom on the rectangle.
-  -selectBrochi = perform an aproximative tubular segmentation in the region under the cursor.
+  - Enhance Region = Enhance contrast in the region under the cursor.
+  - Select Zone = Zoom on the rectangle.
+  - selectBrochi = perform an aproximative tubular segmentation in the region under the cursor.
 
 
 
