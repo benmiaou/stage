@@ -18,6 +18,7 @@ Processing Menu :
  - Enhance Contrast : try to enhance contrast of the image.
 
 Commands :
+ - MouseWheel or ArrowKeys : switch image.
  - <kbd>Shift</kbd> + left click : Place a rectangle zone.
  - Right click : Menu :
   - Enhance Region = Enhance contrast in the region under the cursor.
