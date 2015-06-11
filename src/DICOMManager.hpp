@@ -24,9 +24,8 @@ public :
     ImageType::Pointer enhanceSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
     ImageType::Pointer extractBronchiInRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
 
-
 private :
-
+ImageType::Pointer smoothImage(ImageType::Pointer src);
     ImageType::Pointer rescale(ImageType::Pointer myITKImage);
 ImageType::Pointer zoom(ImageType::Pointer image, double factor, int posX, int posY);
     ImageType::Pointer fillHoleInBinary(ImageType::Pointer src, int sizeMax);

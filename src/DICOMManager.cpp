@@ -167,6 +167,29 @@ DICOMMManager::ImageType::Pointer DICOMMManager::QTimageToITKImage(QImage image)
 }
 */
 
+DICOMMManager::ImageType::Pointer DICOMMManager::smoothImage(ImageType::Pointer src){
+    typedef   float InternalPixelType;
+    typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
+    typedef itk::CurvatureFlowImageFilter< InternalImageType, InternalImageType >CurvatureFlowImageFilterType;
+    CurvatureFlowImageFilterType::Pointer smoothing = CurvatureFlowImageFilterType::New();
+    typedef itk::CastImageFilter< ImageType, InternalImageType > CastFilterTypeIn;
+    typedef itk::CastImageFilter< InternalImageType, ImageType > CastFilterTypeOut;
+    CastFilterTypeIn::Pointer castFilterIn = CastFilterTypeIn::New();
+    CastFilterTypeOut::Pointer castFilterOut = CastFilterTypeOut::New();
+    castFilterIn->SetInput(src);
+    castFilterIn->Update();
+
+    smoothing->SetInput(castFilterIn->GetOutput());
+    smoothing->SetNumberOfIterations( 5 );
+    smoothing->SetTimeStep( 0.125 );
+    smoothing->Update();
+
+    castFilterOut->SetInput(smoothing->GetOutput());
+    castFilterOut->Update();
+
+    return castFilterOut->GetOutput();
+}
+
 DICOMMManager::ImageType::Pointer DICOMMManager::extractSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY){
     typedef   float InternalPixelType;
     typedef itk::Image<InternalPixelType, Dimension> InternalImageType;
@@ -314,7 +337,6 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractRegion(ImageType::Pointe
     else
         ratio = ((float)height/destHeight);
     dest->Update();
-    std::cout << "ratio : "<< ratio <<" W "<<   destWidth   <<" H "<<  destHeight   <<std::endl;
     dest = zoom(filter->GetOutput(),ratio,dest->GetOrigin()[0],dest->GetOrigin()[1]);
     dest->Update();
     return dest;
@@ -417,7 +439,7 @@ DICOMMManager::ImageType::Pointer DICOMMManager::rescale(ImageType::Pointer myIT
 DICOMMManager::ImageType::Pointer DICOMMManager::getImageFromSerie(int num){
     ImageType::Pointer Null;
     if(num < actualSerie.size() && num >= 0)
-        return actualSerie[num];
+        return rescale(smoothImage(actualSerie[num]));
     return Null;
 }
 
@@ -431,7 +453,7 @@ DICOMMManager::ImageType::Pointer DICOMMManager::enhanceContrast(ImageType::Poin
     imageCalculatorFilter->Compute();
     IntensityWindowingImageFilterType::Pointer filter = IntensityWindowingImageFilterType::New();
     filter->SetInput(myITKImage);
-    filter->SetWindowMinimum(imageCalculatorFilter->GetMinimum()+1);
+    filter->SetWindowMinimum(imageCalculatorFilter->GetMinimum());
     filter->SetWindowMaximum(imageCalculatorFilter->GetMaximum());
     filter->SetOutputMinimum(0);
     filter->SetOutputMaximum(255);

@@ -88,9 +88,8 @@ void MyWindow::createMenus()
     processMenu = this->menuBar()->addMenu(tr("&Processing"));
     fileMenu->addAction(newAct);
     processMenu->addAction(edgesAct);
-    processMenu->addAction(zoneAct);
     processMenu->addAction(contrastAct);
-    processMenu->addAction(selectRegion);
+    this->menuBar()->update();
 }
 
 void MyWindow::openDirectory(){
@@ -107,6 +106,7 @@ void MyWindow::openDirectory(){
         seriesMenu->addAction(newAction);
     }
     connect (signalMapper, SIGNAL(mapped(int)), this, SLOT(openSerie(int))) ;
+    this->menuBar()->update();
 }
 
 
@@ -127,6 +127,7 @@ void MyWindow::openSerie(int i){
     myLabel->setPixmap(p.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
     myLabel->adjustSize();
     this->resize(myLabel->size());
+    this->menuBar()->update();
 }
 
 
@@ -154,6 +155,7 @@ void MyWindow::refreshImage(int num){
                 cpt =0;
         }
     }
+    this->menuBar()->update();
 }
 
 void MyWindow::keyPressEvent(QKeyEvent *event)
@@ -169,6 +171,15 @@ void MyWindow::keyPressEvent(QKeyEvent *event)
     if(event->key() == Qt::Key_Plus)
     {
         controller->changeThreshold(+1);
+    }
+    if(event->key() == Qt::Key_Up)
+    {
+        cpt++;
+    }
+    if(event->key() == Qt::Key_Down)
+    {
+        if(cpt > 0)
+            cpt--;
     }
     refreshImage(cpt);
 
@@ -216,6 +227,7 @@ void MyWindow::ShowContextMenu(const QPoint& pos)
     myMenu.addAction(selectBronchi);
 
     QAction* selectedItem = myMenu.exec(globalPos);
+    this->menuBar()->update();
     if (selectedItem)
     {
 

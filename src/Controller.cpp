@@ -65,7 +65,6 @@ void Controller::resetZoom(){
 QImage Controller::getDicom(int num,float ratio){
 
     QImage null;
-    std::cout << "Rectangle pos : "<< x1*ratio <<" : "<< y1*ratio <<" : "<<x2*ratio <<" : "<< y2*ratio <<std::endl;
     DICOMMManager::ImageType::Pointer mItkImage = mDicom->getImageFromSerie(num);
     if (mItkImage.IsNotNull()){
         if(zone)
