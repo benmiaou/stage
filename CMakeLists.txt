@@ -11,6 +11,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 find_package(Qt4 REQUIRED)
 include(${QT_USE_FILE})
+#find_package(Qt5Widgets)
 find_package(ITK REQUIRED)
 include(${ITK_USE_FILE})
 
@@ -34,4 +35,4 @@ qt4_wrap_cpp(mocFiles ${MYPROJECT_CURRENT_HEADERS})
 
 add_executable(stage ${Stage_SRCS} ${mocFiles})
 
-target_link_libraries(stage ${QT_LIBRARIES} ${ITK_LIBRARIES})
+target_link_libraries(stage ${QT_LIBRARIES} ${ITK_LIBRARIES})#Qt5::Widgets

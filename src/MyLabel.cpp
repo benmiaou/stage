@@ -25,7 +25,6 @@ MyLabel::MyLabel(QWidget* parent)
     m_timer = new QTimer();
     connect(m_timer, SIGNAL(timeout()), this, SLOT(update()));
     m_timer->start(16);
-    this->resize(10000,10000);
 }
 void MyLabel::setRatio(float ratio){
     int x1,y1,x2,y2;

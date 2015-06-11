@@ -35,6 +35,7 @@ protected:
 QSize actualSize;
     QSplashScreen *splash;
     QActionGroup *alignmentGroup;
+    QMenuBar *menuBar;
     QMenu *fileMenu;
     QMenu *seriesMenu;
     QMenu *processMenu;

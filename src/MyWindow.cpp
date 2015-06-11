@@ -19,22 +19,27 @@
 #include "MyLabel.hpp"
 MyWindow::MyWindow()
 {
+    myLabel = new QLabel(this);
+    myDrawer = new MyLabel(this);
+    menuBar = new QMenuBar(myDrawer);
     controller = new Controller();
     this->resize(800,800);
     QPixmap pixmap("./loading1.gif");
     splash = new QSplashScreen(pixmap,0);
     createActions();
     createMenus();
-    myLabel = new QLabel(this);
+
     myLabel->setGeometry(0,0,800,800);
-    myDrawer = new MyLabel(this);
+    myDrawer->setGeometry(0,0,800,800);
     QColor bg_color(255, 0, 0, 0);
     QPalette p(myDrawer->palette());
     p.setColor(QPalette::Background, bg_color);
     myDrawer->setPalette(p);
+
     this->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)),
             this, SLOT(ShowContextMenu(const QPoint&)));
+
 }
 
 void MyWindow::createActions()
@@ -77,19 +82,19 @@ void MyWindow::resizeEvent (QResizeEvent * event){
     refreshImage(cpt);
     if(myLabel->pixmap() != NULL){
         float ratio = (float)actualSize.height()/myLabel->pixmap()->height();
-        myDrawer->setRatio(ratio);
+       myDrawer->setRatio(ratio);
     }
 }
 
 void MyWindow::createMenus()
 {
-    fileMenu = this->menuBar()->addMenu(tr("&File"));
-    seriesMenu = this->menuBar()->addMenu(tr("&Series"));
-    processMenu = this->menuBar()->addMenu(tr("&Processing"));
+    fileMenu = menuBar->addMenu(tr("&File"));
+    seriesMenu = menuBar->addMenu(tr("&Series"));
+    processMenu = menuBar->addMenu(tr("&Processing"));
     fileMenu->addAction(newAct);
     processMenu->addAction(edgesAct);
     processMenu->addAction(contrastAct);
-    this->menuBar()->update();
+    this->menuBar->update();
 }
 
 void MyWindow::openDirectory(){
@@ -106,7 +111,7 @@ void MyWindow::openDirectory(){
         seriesMenu->addAction(newAction);
     }
     connect (signalMapper, SIGNAL(mapped(int)), this, SLOT(openSerie(int))) ;
-    this->menuBar()->update();
+    this->menuBar->update();
 }
 
 
@@ -127,7 +132,7 @@ void MyWindow::openSerie(int i){
     myLabel->setPixmap(p.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
     myLabel->adjustSize();
     this->resize(myLabel->size());
-    this->menuBar()->update();
+    this->menuBar->update();
 }
 
 
@@ -150,12 +155,13 @@ void MyWindow::refreshImage(int num){
                 QPixmap p = QPixmap::fromImage(image_Qt);
                 myLabel->setPixmap(p.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
                 myLabel->resize(myLabel->pixmap()->width(),myLabel->pixmap()->height());
+                myDrawer->resize(myLabel->pixmap()->width(),myLabel->pixmap()->height());
             }
             else
                 cpt =0;
         }
     }
-    this->menuBar()->update();
+    this->menuBar->update();
 }
 
 void MyWindow::keyPressEvent(QKeyEvent *event)
@@ -227,7 +233,7 @@ void MyWindow::ShowContextMenu(const QPoint& pos)
     myMenu.addAction(selectBronchi);
 
     QAction* selectedItem = myMenu.exec(globalPos);
-    this->menuBar()->update();
+    this->menuBar->update();
     if (selectedItem)
     {
 
