@@ -17,10 +17,14 @@ class Controller
     void loadDICOMSerie(string seriesIdentifier,string directoryName);
     void refreshZone(int x1, int y1, int x2, int y2);
     std::vector<std::string> getSeries(std::string directoryName);
+    std::vector<int> getHistogram();
     void refreshMousePos(int posX, int posY);
-     void resetZoom();
+    void resetZoom();
+    void setThreshold(int max, int min);
+    bool isNeedingRefresh();
     QImage getDicom(int num,float ratio);
  private :
+
      DICOMMManager *mDicom;
      int threshold;
      double zoomFactor;
@@ -34,6 +38,10 @@ class Controller
      int x1,x2,y1,y2;
      int mouseX;
      int mouseY;
+     int lowerThreshold;
+     int upperThreshold;
+     int numActualImage;
+     bool needRefresh;
 
 };
 

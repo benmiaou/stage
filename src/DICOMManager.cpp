@@ -31,7 +31,7 @@
 #include "itkVotingBinaryIterativeHoleFillingImageFilter.h"
 #include "itkSubtractImageFilter.h"
 #include "itkImageDuplicator.h"
-
+#include "itkImageToHistogramFilter.h"
 
 
 
@@ -42,6 +42,57 @@
 template<typename TImage, typename TLabelImage>
 static void SummarizeLabelStatistics (TImage* image,TLabelImage* labelImage);
 const  unsigned int Dimension = 2;
+
+DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer src , int upperThreshold, int lowerThreshold){
+    typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
+       BinaryThresholdImageFilterType;
+
+     BinaryThresholdImageFilterType::Pointer thresholdFilter
+       = BinaryThresholdImageFilterType::New();
+     thresholdFilter->SetInput(src);
+     thresholdFilter->SetLowerThreshold(lowerThreshold);
+     thresholdFilter->SetUpperThreshold(upperThreshold);
+     thresholdFilter->SetInsideValue(255);
+     thresholdFilter->SetOutsideValue(0);
+     thresholdFilter->Update();
+     return thresholdFilter->GetOutput();
+}
+
+
+void DICOMMManager::getHistogram(ImageType::Pointer src){
+    typedef itk::Statistics::ImageToHistogramFilter< ImageType >
+            ImageToHistogramFilterType;
+
+    ImageToHistogramFilterType::HistogramType::MeasurementVectorType
+            lowerBound(src->GetImageDimension());
+    lowerBound.Fill(0);
+
+    ImageToHistogramFilterType::HistogramType::MeasurementVectorType
+            upperBound(src->GetImageDimension());
+    upperBound.Fill(255) ;
+
+    ImageToHistogramFilterType::HistogramType::SizeType
+            size(src->GetImageDimension());
+    size.Fill(255);
+
+    ImageToHistogramFilterType::Pointer imageToHistogramFilter =
+            ImageToHistogramFilterType::New();
+    imageToHistogramFilter->SetInput(src);
+    imageToHistogramFilter->SetHistogramBinMinimum(lowerBound);
+    imageToHistogramFilter->SetHistogramBinMaximum(upperBound);
+    imageToHistogramFilter->SetHistogramSize(size);
+    imageToHistogramFilter->Update();
+    ImageToHistogramFilterType::HistogramType* histogram =
+            imageToHistogramFilter->GetOutput();
+    const unsigned int histogramSize = histogram->Size();
+    actualHistogram.clear();
+    for( unsigned int bin=0; bin < histogramSize; bin++ )
+    {
+        actualHistogram.push_back(histogram->GetFrequency(bin, 0));
+    }
+}
+
+
 
 DICOMMManager::DICOMMManager(){
 }

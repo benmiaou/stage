@@ -24,12 +24,17 @@ src/MyWindow.cpp
 src/DICOMManager.cpp
 src/MyLabel.cpp
 src/Controller.cpp
+src/MyHistogram.cpp
+src/MyHistogramLabel.cpp
 )
 set(MYPROJECT_CURRENT_HEADERS
 src/MyWindow.hpp
 src/DICOMManager.hpp
 src/MyLabel.hpp
 src/Controller.hpp
+src/MyHistogram.hpp
+src/MyHistogramLabel.h
+
 )
 qt4_wrap_cpp(mocFiles ${MYPROJECT_CURRENT_HEADERS})
 

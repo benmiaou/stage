@@ -8,12 +8,29 @@ Controller::Controller(){
     edge = zone = contrast = false;
     x1 = x2 = y1 = y2 = mouseX = mouseY = 0;
     threshold = 1;
-
+    upperThreshold = 255;
+    lowerThreshold = 0;
+    needRefresh = false;
 }
 
 void Controller::changeThreshold (int thresholdModifier){
     if(thresholdModifier + threshold > 0)
         threshold += thresholdModifier;
+}
+bool Controller::isNeedingRefresh(){
+    if(needRefresh){
+    needRefresh = false;
+    return true;
+    }
+    return false;
+}
+
+void Controller::setThreshold(int max, int min){
+    if(upperThreshold != max || lowerThreshold != min){
+        upperThreshold = max;
+        lowerThreshold = min;
+        needRefresh = true;
+    }
 }
 
 void Controller::refreshBool(bool edge, bool zone , bool contrast, bool selectRegion, bool selectBronchi){
@@ -61,9 +78,13 @@ void Controller::resetZoom(){
     posY = 0;
     zoomFactor = 1;
 }
+std::vector<int> Controller::getHistogram(){
+    DICOMMManager::ImageType::Pointer mItkImage = mDicom->getImageFromSerie(numActualImage);
+    mDicom->getHistogram(mItkImage);
+    return mDicom->actualHistogram;
+}
 
 QImage Controller::getDicom(int num,float ratio){
-
     QImage null;
     DICOMMManager::ImageType::Pointer mItkImage = mDicom->getImageFromSerie(num);
     if (mItkImage.IsNotNull()){
@@ -92,6 +113,9 @@ QImage Controller::getDicom(int num,float ratio){
             mItkImage = mDicom->enhanceContrast(mItkImage);
         if(edge)
             mItkImage = mDicom->getEdges(mItkImage,threshold);
+        if(upperThreshold != 255 || lowerThreshold!=0)
+            mItkImage = mDicom->threshold(mItkImage,upperThreshold,lowerThreshold);
+        numActualImage = num;
         return(mDicom->ITKImageToQImage(mItkImage));
     }
     return null;

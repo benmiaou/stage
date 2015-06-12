@@ -15,6 +15,7 @@
 #include <QTimer>
 
 #include "MyWindow.hpp"
+#include "MyHistogram.hpp"
 
 #include "MyLabel.hpp"
 MyWindow::MyWindow()
@@ -40,8 +41,20 @@ MyWindow::MyWindow()
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)),
             this, SLOT(ShowContextMenu(const QPoint&)));
 
+    m_timer = new QTimer();
+    connect(m_timer, SIGNAL(timeout()), this, SLOT(updateImage()));
+    m_timer->start(50);
+
+}
+void MyWindow::showHistogram(){
+    MyHistogram *histogram = new MyHistogram(controller);
+    histogram->show();
 }
 
+void MyWindow::updateImage(){
+    if(controller->isNeedingRefresh())
+     refreshImage(cpt);
+}
 void MyWindow::createActions()
 {
     newAct = new QAction(tr("&Open Directory"), this);
@@ -72,6 +85,11 @@ void MyWindow::createActions()
     selectBronchi->setStatusTip(tr("show bronchi in region"));
     selectBronchi->setCheckable(true);
     connect(selectBronchi, SIGNAL(triggered()),this ,SLOT(refreshBool()));
+
+    histogramAct = new QAction(tr("&Show Histogram"), this);
+    histogramAct->setStatusTip(tr("Show Histogram"));
+    histogramAct->setCheckable(true);
+    connect(histogramAct, SIGNAL(triggered()),this ,SLOT(showHistogram()));
 }
 void MyWindow::refreshBool (){
     controller->refreshBool(edgesAct->isChecked(),zoneAct->isChecked(),contrastAct->isChecked(),selectRegion->isChecked(),selectBronchi->isChecked());
@@ -94,6 +112,7 @@ void MyWindow::createMenus()
     fileMenu->addAction(newAct);
     processMenu->addAction(edgesAct);
     processMenu->addAction(contrastAct);
+     processMenu->addAction(histogramAct);
     this->menuBar->update();
 }
 
@@ -187,6 +206,7 @@ void MyWindow::keyPressEvent(QKeyEvent *event)
         if(cpt > 0)
             cpt--;
     }
+
     refreshImage(cpt);
 
 }

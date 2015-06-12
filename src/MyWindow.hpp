@@ -16,9 +16,10 @@
 
 class MyWindow : public QMainWindow
 {
-    Q_OBJECT
+Q_OBJECT
 public:
     MyWindow();
+        void refreshImage(int cpt);
 protected:
     int cpt;
     Controller *controller;
@@ -29,7 +30,6 @@ protected:
     void wheelEvent(QWheelEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void resizeEvent(QResizeEvent * event);
-
 
 
 QSize actualSize;
@@ -45,19 +45,22 @@ QSize actualSize;
     QAction *contrastAct;
     QAction *selectRegion;
     QAction *selectBronchi;
+    QAction *histogramAct;
     QLabel *infoLabel;
     QTimer *m_timer;
 
 private :
-    void refreshImage(int cpt);
+
     void createActions();
     void createMenus();
 
 private slots :
+    void updateImage();
     void openDirectory();
     void openSerie(int);
     void refreshBool();
      void ShowContextMenu(const QPoint& pos);
+     void showHistogram();
 };
 
 
