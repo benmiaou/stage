@@ -1,4 +1,4 @@
-project(stage CXX)
+project(stage CXX C)
 
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
@@ -10,10 +10,15 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 
+include_directories( ${PROJECT_SOURCE_DIR}/src )
+include_directories( ${PROJECT_SOURCE_DIR}/src/DICOMManager )
+include_directories( ${PROJECT_SOURCE_DIR}/src/ui )
+include_directories( ${PROJECT_SOURCE_DIR}/src/Controller )
+
 
 find_package(Qt4 REQUIRED QtCore QtOpenGL QtGui QtXml)
 include(${QT_USE_FILE})
-#find_package(Qt5Widgets)
+
 find_package(ITK REQUIRED)
 include(${ITK_USE_FILE})
 find_package(DGtal REQUIRED)
@@ -21,6 +26,10 @@ INCLUDE_DIRECTORIES(${DGTAL_INCLUDE_DIRS})
 LINK_DIRECTORIES(${DGTAL_LIBRARY_DIRS})
 find_package(OpenGL REQUIRED)
 
+#add readme in buildDir
+configure_file(README.md README.md)
+
+ADD_DEFINITIONS(-std=c++11 -fpermissive)
 
 
 include_directories( ${PROJECT_SOURCE_DIR}/src )
@@ -28,21 +37,23 @@ include_directories( ${PROJECT_SOURCE_DIR}/src )
 # the list of source files
 set(Stage_SRCS
     src/Main.cpp
-src/DICOMManager.cpp
-src/MyLabel.cpp
-src/Controller.cpp
-src/MyWindow.cpp
-src/MyHistogram.cpp
-src/MyScrollBar.cpp
-src/DICOMManager.hpp
-src/MyLabel.hpp
-src/Controller.hpp
-src/MyScrollBar.h
+src/Controller/Controller.cpp
 
+src/DICOMManager/DICOMManager.cpp
+
+src/ui/MyLabel.cpp
+src/ui/MyWindow.cpp
+src/ui/MyHistogram.cpp
+src/ui/MyScrollBar.cpp
+
+src/Controller/Controller.hpp
+src/DICOMManager/DICOMManager.hpp
+src/ui/MyLabel.hpp
+src/ui/MyScrollBar.h
 )
 set(MYPROJECT_CURRENT_HEADERS
-src/MyWindow.hpp
-src/MyHistogram.hpp
+src/ui/MyWindow.hpp
+src/ui/MyHistogram.hpp
 )
 qt4_wrap_cpp(mocFiles ${MYPROJECT_CURRENT_HEADERS})
 

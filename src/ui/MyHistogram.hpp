@@ -2,13 +2,11 @@
 #define MYHISTOGRAM_HPP
 
 
-#include <QMainWindow>
+
 #include "Controller.hpp"
 #include "MyScrollBar.h"
-#include <QLabel>
-#include "DGtal/base/Common.h"
-#include "DGtal/io/Display3D.h"
 #include "DGtal/io/viewers/Viewer3D.h"
+
 using namespace DGtal;
 using namespace Z3i;
 
@@ -26,7 +24,6 @@ protected:
     Controller *controller;
     MyScrollBar *scrollBarMin;
     MyScrollBar *scrollBarMax;
-    QLabel *histogramLabel;
     QPainter *painter;
     QAction *Threshold;
     QAction *showThreshold;

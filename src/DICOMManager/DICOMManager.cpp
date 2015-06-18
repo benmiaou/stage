@@ -1,4 +1,3 @@
-
 #include "itkGDCMImageIO.h"
 #include "itkImageSeriesReader.h"
 #include "itkImage.h"
@@ -16,19 +15,13 @@
 #include "itkConfidenceConnectedImageFilter.h"
 #include "itkAddImageFilter.h"
 #include "itkConnectedThresholdImageFilter.h"
-#include "itkGeodesicActiveContourLevelSetImageFilter.h"
-#include "itkCurvatureAnisotropicDiffusionImageFilter.h"
-#include "itkGradientMagnitudeRecursiveGaussianImageFilter.h"
 #include "itkBinaryBallStructuringElement.h"
 #include "itkBinaryDilateImageFilter.h"
 #include "itkInvertIntensityImageFilter.h"
-#include "itkSigmoidImageFilter.h"
-#include "itkFastMarchingImageFilter.h"
 #include "itkRescaleIntensityImageFilter.h"
 #include "itkBinaryThresholdImageFilter.h"
 #include "itkCurvatureFlowImageFilter.h"
 #include "itkMaskImageFilter.h"
-#include "itkVotingBinaryIterativeHoleFillingImageFilter.h"
 #include "itkSubtractImageFilter.h"
 #include "itkImageDuplicator.h"
 #include "itkImageToHistogramFilter.h"
@@ -299,12 +292,6 @@ DICOMMManager::ImageType::Pointer DICOMMManager::enhanceSelectedRegion(ImageType
 
     ImageType::Pointer selectRegion = extractSelectedRegion(src , seedPosX, seedPosY);
 
-    /*structuringElement.SetRadius(25);
-    structuringElement.CreateStructuringElement();
-    dilateFilter->SetInput(confidenceConnected->GetOutput());
-    dilateFilter->SetKernel(structuringElement);
-    dilateFilter->Update();*/
-
 
     ImageType::Pointer regionWithoutHole = fillHoleInBinary(selectRegion,30);
 
@@ -473,10 +460,6 @@ DICOMMManager::ImageType::Pointer DICOMMManager::zoom(ImageType::Pointer myITKIm
     _pResizeFilter->SetInput(myITKImage);
     _pResizeFilter->UpdateLargestPossibleRegion();
     _pResizeFilter->Update();
-    // myITKImage = _pResizeFilter->GetOutput();
-    //myITKImage->Update();
-    //myITKImage = extractRegion(myITKImage ,0,0, wight-1, height-1);
-    //myITKImage->Update();
     return _pResizeFilter->GetOutput();
 }
 
