@@ -1,35 +1,38 @@
 #include "Controller.hpp"
+#include "MyWindow.hpp"
 
 
 
-
-Controller::Controller(){
+Controller::Controller(){    
     mDicom = new DICOMMManager();
-    edge = zone = contrast = false;
+    edge = zone = contrast = isActiveThreshold =false;
     x1 = x2 = y1 = y2 = mouseX = mouseY = 0;
     threshold = 1;
     upperThreshold = 255;
     lowerThreshold = 0;
     needRefresh = false;
+    MyWindow *window = new MyWindow(this);
+    this->setCentralWidget(window);
+
+}
+
+void Controller::activeThreshold(bool isActive){
+    this->isActiveThreshold = isActive;
+    ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
 }
 
 void Controller::changeThreshold (int thresholdModifier){
     if(thresholdModifier + threshold > 0)
         threshold += thresholdModifier;
 }
-bool Controller::isNeedingRefresh(){
-    if(needRefresh){
-    needRefresh = false;
-    return true;
-    }
-    return false;
-}
+
 
 void Controller::setThreshold(int max, int min){
     if(upperThreshold != max || lowerThreshold != min){
         upperThreshold = max;
         lowerThreshold = min;
-        needRefresh = true;
+        if(isActiveThreshold)
+            ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
     }
 }
 
@@ -61,8 +64,8 @@ void Controller::refreshZoom(double zoomModifier, int posX, int posY){
 }
 
 void Controller::refreshMousePos(int posX, int posY){
-    mouseX = posX;
-    mouseY = posY;
+    this->mouseX = posX;
+    this->mouseY = posY;
 }
 
 void Controller::refreshZone(int x1, int y1, int x2, int y2){
@@ -78,10 +81,21 @@ void Controller::resetZoom(){
     posY = 0;
     zoomFactor = 1;
 }
-std::vector<int> Controller::getHistogram(){
-    DICOMMManager::ImageType::Pointer mItkImage = mDicom->getImageFromSerie(numActualImage);
-    mDicom->getHistogram(mItkImage);
-    return mDicom->actualHistogram;
+
+std::vector<int> Controller::getHistogram(){    
+    return mDicom->getHistogram(numActualImage);
+}
+
+std::vector< std::vector<int> > Controller::getHistograms(){
+    std::vector< std::vector<int> > histograms;
+    int num = 0;
+    std::vector<int> histogram = mDicom->getHistogram(num);
+    while(!histogram.empty()){
+        histograms.push_back(histogram);
+        num++;
+        histogram = mDicom->getHistogram(num);
+    }
+    return histograms;
 }
 
 QImage Controller::getDicom(int num,float ratio){
@@ -113,8 +127,9 @@ QImage Controller::getDicom(int num,float ratio){
             mItkImage = mDicom->enhanceContrast(mItkImage);
         if(edge)
             mItkImage = mDicom->getEdges(mItkImage,threshold);
-        if(upperThreshold != 255 || lowerThreshold!=0)
-            mItkImage = mDicom->threshold(mItkImage,upperThreshold,lowerThreshold);
+        if(isActiveThreshold)
+            if(upperThreshold != 255 || lowerThreshold!=0)
+                mItkImage = mDicom->threshold(mItkImage,upperThreshold,lowerThreshold);
         numActualImage = num;
         return(mDicom->ITKImageToQImage(mItkImage));
     }

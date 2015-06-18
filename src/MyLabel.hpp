@@ -1,16 +1,11 @@
 #ifndef MYLABEL_HPP
 #define MYLABEL_HPP
 
-
-#include <QApplication>
 #include <QLabel>
-#include <QFileDialog>
-#include <QMenu>
-#include <QMainWindow>
-#include <QFileDialog>
-#include <QWidget>
-#include <QObject>
-#include <QSplashScreen>
+#include <QTimer>
+#include <QPainter>
+#include <QMouseEvent>
+
 
 class MyLabel : public QLabel
 {

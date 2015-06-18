@@ -13,59 +13,105 @@
 #include <iostream>
 #include <QStatusBar>
 #include <QPainter>
-#include <QTimer>
+#include "DGtal/base/Common.h"
+#include "DGtal/io/Display3D.h"
+#include "DGtal/io/viewers/Viewer3D.h"
+
+using namespace DGtal;
+using namespace Z3i;
+
 
 
 MyHistogram::MyHistogram(Controller *controller)
 {
+    actualUpper = 255;
+    actualLower = 0;
+    painter = new QPainter();
+    QWidget *centralWidget = new QWidget();
+    this->setCentralWidget(centralWidget);
     this->controller = controller;
     this->resize(800,600);
     QVBoxLayout *layout = new QVBoxLayout();
-    layout->update();
-    scrollBarMin = new QScrollBar(Qt::Horizontal);
+    scrollBarMin = new MyScrollBar(Qt::Horizontal,this);
     scrollBarMin->setMinimum(0);
     scrollBarMin->setMaximum(255);
     scrollBarMin->setPageStep(1);
     layout->addWidget(scrollBarMin);
-    histogramLabel = new MyHistogramLabel(this);
-    histogramLabel->resize(this->size());
-    layout->addWidget(histogramLabel);
-    scrollBarMax = new QScrollBar(Qt::Horizontal);
+    QVBoxLayout *layout2 = new QVBoxLayout();
+    viewer = new Viewer3D<>();
+    viewer->setParent(this);
+   /* histogramLabel = new QLabel(this);
+    histogramLabel->setScaledContents(true);*/
+    layout2->addWidget(viewer);
+    layout2->setSpacing(25);
+    layout->addLayout(layout2);
+    scrollBarMax = new MyScrollBar(Qt::Horizontal,this);
     scrollBarMax->setMinimum(0);
     scrollBarMax->setMaximum(255);
     scrollBarMax->setPageStep(1);
-    scrollBarMax->setValue(254);
+    scrollBarMax->setValue(255);
     layout->addWidget(scrollBarMax);
-    this->setLayout(layout);
-    Histogram();
-    m_timer = new QTimer();
-    connect(m_timer, SIGNAL(timeout()), this, SLOT(update()));
-    m_timer->start(160);
+    centralWidget->setLayout(layout);
+
+    QMenuBar *menuBar = new QMenuBar();
+    QMenu *processMenu =  menuBar->addMenu(tr("&Action"));
+    Threshold = new QAction(tr("&Apply Threshold"), this);
+    Threshold->setStatusTip(tr("Apply Threshold"));
+    Threshold->setCheckable(true);
+    connect(Threshold, SIGNAL(triggered()),this ,SLOT(activateThreshold()));
+    showThreshold= new QAction(tr("&Show Threshold"), this);
+    showThreshold->setStatusTip(tr("Show Threshold"));
+    showThreshold->setCheckable(true);
+    connect(showThreshold, SIGNAL(triggered()),this ,SLOT(update()));
+    processMenu->addAction(Threshold);
+    processMenu->addAction(showThreshold);
+    this->setMenuBar(menuBar);
+
 
 }
 
-void MyHistogram::Histogram(){
-    std::vector<int> histogram = controller->getHistogram();
-    histogramLabel->updateHistogram(histogram);
+
+void MyHistogram::activateThreshold(){
+    controller->activeThreshold(Threshold->isChecked());
     this->update();
 }
 
-void MyHistogram::paintEvent(QPaintEvent *event)
-{
-    int widthRatio = histogramLabel->width()/255;
-    int mardging = 10;
-     painter = new QPainter();
-    if(!painter->isActive())
-        painter->begin(this);
-    painter->setPen(Qt::red);
-    painter->drawLine ((scrollBarMin->value()+mardging)*widthRatio,0,(scrollBarMin->value()+mardging)*widthRatio,this->height());
-    painter->drawLine ((scrollBarMax->value()+mardging)*widthRatio,0,(scrollBarMax->value()+mardging)*widthRatio,this->height());
-    scrollBarMin->resize(histogramLabel->width(),30);
-    scrollBarMax->resize(histogramLabel->width(),30);
-    if(scrollBarMin->value() > scrollBarMax->value())
-        scrollBarMax->setValue(scrollBarMin->value());
-    controller->setThreshold(scrollBarMax->value(),scrollBarMin->value());
-
+void MyHistogram::updateHistogram(){
+    histograms = controller->getHistograms();
 }
 
+void MyHistogram::paintEvent(QPaintEvent *event)
+{    
+    viewer->clear();
+    int minVal = scrollBarMin->value();
+    int maxVal = scrollBarMax->value();
+    for(int i=0; i<histograms.size() ; i++)
+        for(int j=0; j<histograms[i].size(); j++){
+            Point pBL = Point(j,0,i);
+            Point pTL = Point(j,histograms[i][j]/100,i);
+            if(j > minVal && j < maxVal){
+                *viewer <<  CustomColors3D( Color( 255, i%255, (j*5)%255 ), Color( 255, i%255, (j*5)%255 ) );
+                 viewer->addLine(pBL,pTL,1);
+            }
+            else
+                if(showThreshold->isChecked()){
+                    *viewer <<  CustomColors3D( Color( 0, i%255, (j*5)%255 ), Color( 0, i%255, (j*5)%255 ) );
+                    viewer->addLine(pBL,pTL,1);
+                }
+        }
+    *viewer<< Viewer3D<>::updateDisplay;
+    viewer->update();
+    if(minVal != actualLower)
+        if(minVal > maxVal)
+            scrollBarMax->setValue(minVal);
+    if(maxVal != actualUpper)
+        if(minVal > maxVal)
+            scrollBarMin->setValue(maxVal);
+    controller->setThreshold(scrollBarMax->value(),scrollBarMin->value());
+    }
 
+void MyHistogram::closeEvent(QCloseEvent *event)
+{
+    event->ignore();
+    this->hide();
+}

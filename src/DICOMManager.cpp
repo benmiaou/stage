@@ -1,4 +1,4 @@
-#include "itkImage.h"
+
 #include "itkGDCMImageIO.h"
 #include "itkImageSeriesReader.h"
 #include "itkImage.h"
@@ -36,7 +36,7 @@
 
 
 #include "DICOMManager.hpp"
-#include <QImage>
+
 
 
 template<typename TImage, typename TLabelImage>
@@ -59,7 +59,10 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
 }
 
 
-void DICOMMManager::getHistogram(ImageType::Pointer src){
+std::vector<int> DICOMMManager::getHistogram(int num){
+    std::vector<int> actualHistogram;
+    if(num < actualSerie.size()){
+    ImageType::Pointer src = actualSerie[num];
     typedef itk::Statistics::ImageToHistogramFilter< ImageType >
             ImageToHistogramFilterType;
 
@@ -85,11 +88,13 @@ void DICOMMManager::getHistogram(ImageType::Pointer src){
     ImageToHistogramFilterType::HistogramType* histogram =
             imageToHistogramFilter->GetOutput();
     const unsigned int histogramSize = histogram->Size();
-    actualHistogram.clear();
+
     for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
         actualHistogram.push_back(histogram->GetFrequency(bin, 0));
+    }   
     }
+    return actualHistogram;
 }
 
 
@@ -102,7 +107,7 @@ QImage DICOMMManager::ITKImageToQImage(ImageType::Pointer myITKImage){
     int wight = myITKImage->GetLargestPossibleRegion().GetSize()[0];
     int height = myITKImage->GetLargestPossibleRegion().GetSize()[1];
 
-    QImage *image_Qt = new QImage (wight,height,QImage::Format_RGB32);
+    QImage image_Qt(wight,height,QImage::Format_RGB32);
     for(unsigned int i = 0; i < wight; i++)
     {
         for(unsigned int j = 0; j < height; j++)
@@ -112,11 +117,11 @@ QImage DICOMMManager::ITKImageToQImage(ImageType::Pointer myITKImage){
             pixelIndex[1] = j;
             int pixelValue = myITKImage->GetPixel(pixelIndex);
             QRgb value = qRgb(pixelValue,pixelValue,pixelValue);
-            image_Qt->setPixel(i,j, value );
+            image_Qt.setPixel(i,j, value );
         }
 
     }
-    return *image_Qt;
+    return image_Qt;
 }
 
 DICOMMManager::ImageType::Pointer DICOMMManager::fillHoleInBinary(ImageType::Pointer src, int sizeMax){
@@ -561,7 +566,9 @@ void DICOMMManager::loadDICOMSerie(std::string seriesIdentifier,
     typedef std::vector< std::string >   FileNamesContainer;
     FileNamesContainer fileNames;
     fileNames = nameGenerator->GetFileNames(seriesIdentifier);
+
     actualSerie.clear();
+    actualSerie = std::vector<ImageType::Pointer>();
     for (int i =0; i< fileNames.size(); i++){
         std::cout << fileNames[i] << std::endl;
         reader->SetFileName(fileNames[i]);

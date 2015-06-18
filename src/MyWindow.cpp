@@ -1,60 +1,57 @@
-#include <QPushButton>
-#include <QApplication>
-#include <QKeyEvent>
-#include <sstream>
-#include <string>
-#include <dirent.h>
-#include <vector>
-#include <QAction>
 #include <QMenuBar>
-#include <QLayout>
 #include <QSignalMapper>
-#include <iostream>
-#include <QStatusBar>
-#include <QPainter>
-#include <QTimer>
+#include <QKeyEvent>
+#include <QFileDialog>
+#include <QApplication>
+#include <QSignalMapper>
+
 
 #include "MyWindow.hpp"
-#include "MyHistogram.hpp"
 
-#include "MyLabel.hpp"
-MyWindow::MyWindow()
+
+
+
+
+MyWindow::MyWindow(Controller *controller)
 {
+    this->setFocusPolicy(Qt::StrongFocus);
+    this->controller = controller;
     myLabel = new QLabel(this);
     myDrawer = new MyLabel(this);
-    menuBar = new QMenuBar(myDrawer);
-    controller = new Controller();
-    this->resize(800,800);
+    menuBar = new QMenuBar();
+    menuBar->setNativeMenuBar(false);
+    controller->setMenuBar(menuBar);
+    histogram = new MyHistogram(controller);
+    controller->resize(800,800);
     QPixmap pixmap("./loading1.gif");
     splash = new QSplashScreen(pixmap,0);
     createActions();
     createMenus();
-
     myLabel->setGeometry(0,0,800,800);
     myDrawer->setGeometry(0,0,800,800);
     QColor bg_color(255, 0, 0, 0);
     QPalette p(myDrawer->palette());
     p.setColor(QPalette::Background, bg_color);
     myDrawer->setPalette(p);
-
     this->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)),
             this, SLOT(ShowContextMenu(const QPoint&)));
 
-    m_timer = new QTimer();
-    connect(m_timer, SIGNAL(timeout()), this, SLOT(updateImage()));
-    m_timer->start(50);
-
 }
+
+
+
 void MyWindow::showHistogram(){
-    MyHistogram *histogram = new MyHistogram(controller);
-    histogram->show();
+    if(myLabel->pixmap() != NULL){
+        QImage image_Qt = myLabel->pixmap()->toImage();
+        if (!image_Qt.isNull()){
+            histogram->show();
+            histogram->update();
+
+        }
+    }
 }
 
-void MyWindow::updateImage(){
-    if(controller->isNeedingRefresh())
-     refreshImage(cpt);
-}
 void MyWindow::createActions()
 {
     newAct = new QAction(tr("&Open Directory"), this);
@@ -88,7 +85,6 @@ void MyWindow::createActions()
 
     histogramAct = new QAction(tr("&Show Histogram"), this);
     histogramAct->setStatusTip(tr("Show Histogram"));
-    histogramAct->setCheckable(true);
     connect(histogramAct, SIGNAL(triggered()),this ,SLOT(showHistogram()));
 }
 void MyWindow::refreshBool (){
@@ -100,7 +96,7 @@ void MyWindow::resizeEvent (QResizeEvent * event){
     refreshImage(cpt);
     if(myLabel->pixmap() != NULL){
         float ratio = (float)actualSize.height()/myLabel->pixmap()->height();
-       myDrawer->setRatio(ratio);
+        myDrawer->setRatio(ratio);
     }
 }
 
@@ -112,8 +108,7 @@ void MyWindow::createMenus()
     fileMenu->addAction(newAct);
     processMenu->addAction(edgesAct);
     processMenu->addAction(contrastAct);
-     processMenu->addAction(histogramAct);
-    this->menuBar->update();
+    processMenu->addAction(histogramAct);
 }
 
 void MyWindow::openDirectory(){
@@ -130,7 +125,6 @@ void MyWindow::openDirectory(){
         seriesMenu->addAction(newAction);
     }
     connect (signalMapper, SIGNAL(mapped(int)), this, SLOT(openSerie(int))) ;
-    this->menuBar->update();
 }
 
 
@@ -151,7 +145,7 @@ void MyWindow::openSerie(int i){
     myLabel->setPixmap(p.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
     myLabel->adjustSize();
     this->resize(myLabel->size());
-    this->menuBar->update();
+    histogram->updateHistogram();
 }
 
 
@@ -159,6 +153,7 @@ void MyWindow::refreshImage(int num){
     if(myLabel->pixmap() != NULL){
         QImage image_Qt = myLabel->pixmap()->toImage();
         if (!image_Qt.isNull()){
+
             float ratio = 1;
             myDrawer->show = !zoneAct->isChecked();
             myDrawer->isSelectable = !zoneAct->isChecked();
@@ -175,12 +170,12 @@ void MyWindow::refreshImage(int num){
                 myLabel->setPixmap(p.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
                 myLabel->resize(myLabel->pixmap()->width(),myLabel->pixmap()->height());
                 myDrawer->resize(myLabel->pixmap()->width(),myLabel->pixmap()->height());
+
             }
             else
                 cpt =0;
         }
     }
-    this->menuBar->update();
 }
 
 void MyWindow::keyPressEvent(QKeyEvent *event)
@@ -245,6 +240,7 @@ void MyWindow::wheelEvent(QWheelEvent *event)
 void MyWindow::ShowContextMenu(const QPoint& pos)
 {
     QPoint globalPos = this->mapToGlobal(pos);
+    std::cout << myLabel->mapFromGlobal(globalPos).x() << myLabel->mapFromGlobal(globalPos).y() << std::endl;
     controller->refreshMousePos(myLabel->mapFromGlobal(globalPos).x(),myLabel->mapFromGlobal(globalPos).y());
 
     QMenu myMenu;

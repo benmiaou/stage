@@ -16,6 +16,10 @@ Series Menu :
 Processing Menu :
  - Show Edges : show edges.
  - Enhance Contrast : try to enhance contrast of the image.
+ - Show histogram : Show the 3D histogram of the serie in a new window.
+  - histogram window menu :
+   - Apply threshold : apply threshold with the selected value with the scroll bars.
+   - Show Threshold : Show the part of the histogram out of the thershold selection.
 
 Commands :
  - MouseWheel or ArrowKeys : switch image.

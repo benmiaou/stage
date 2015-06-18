@@ -1,11 +1,16 @@
-#include "MyWindow.hpp"
 
+
+
+
+#include "Controller.hpp"
+
+#include <QApplication>
 
 int main(int argc, char *argv[])
 {
 
-    QApplication app(argc, argv);
-    MyWindow window;
-     window.show();
+    QApplication app(argc, argv);    
+    Controller window;
+    window.show();
     return app.exec();
 }

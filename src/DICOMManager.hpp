@@ -21,14 +21,13 @@ public :
     QImage ITKImageToQImage(ImageType::Pointer myITKImage);
 
     ImageType::Pointer getImageFromSerie(int num);
-    void getHistogram(ImageType::Pointer src);
+    std::vector<int> getHistogram(int num);
     ImageType::Pointer enhanceContrast(ImageType::Pointer myITKImage);
     ImageType::Pointer extractRegion(ImageType::Pointer src ,int startX,int startY, int endX, int endY);
     ImageType::Pointer  getEdges(ImageType::Pointer  src,int threshold);
     ImageType::Pointer enhanceSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
     ImageType::Pointer extractBronchiInRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
     ImageType::Pointer threshold(ImageType::Pointer src, int upperThreshold, int lowerThreshold);
-    std::vector<int> actualHistogram;
 
 private :
     ImageType::Pointer smoothImage(ImageType::Pointer src);

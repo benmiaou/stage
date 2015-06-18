@@ -1,13 +1,15 @@
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
+
 #include "DICOMManager.hpp"
-#include <QImage>
+#include <QMainWindow>
+
 
 using namespace std;
 
 
-class Controller
+class Controller : public QMainWindow
 {
  public :
     Controller();
@@ -22,8 +24,11 @@ class Controller
     void resetZoom();
     void setThreshold(int max, int min);
     bool isNeedingRefresh();
+    void activeThreshold(bool isActive);
     QImage getDicom(int num,float ratio);
- private :
+    std::vector< std::vector<int> > getHistograms();
+
+ protected :
 
      DICOMMManager *mDicom;
      int threshold;
@@ -35,6 +40,7 @@ class Controller
      bool contrast;
      bool selectRegion;
      bool selectBronchi;
+     bool isActiveThreshold;
      int x1,x2,y1,y2;
      int mouseX;
      int mouseY;
@@ -42,7 +48,6 @@ class Controller
      int upperThreshold;
      int numActualImage;
      bool needRefresh;
-
 };
 
 

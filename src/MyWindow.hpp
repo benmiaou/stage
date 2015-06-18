@@ -1,25 +1,23 @@
 #ifndef MYWINDOW_HPP
 #define MYWINDOW_HPP
 
-#include <QApplication>
-#include <QLabel>
-#include <QFileDialog>
-#include <QMenu>
-#include <QMainWindow>
-#include <QFileDialog>
-#include <QWidget>
+
 #include <QObject>
 #include <QSplashScreen>
-#include "MyLabel.hpp"
-#include "Controller.hpp"
+#include <QActionGroup>
+#include <QMenuBar>
 
+
+#include "MyLabel.hpp"
+#include "MyHistogram.hpp"
+#include "Controller.hpp"
 
 class MyWindow : public QMainWindow
 {
-Q_OBJECT
+    Q_OBJECT
 public:
-    MyWindow();
-        void refreshImage(int cpt);
+    MyWindow(Controller *controller);
+    void refreshImage(int cpt);
 protected:
     int cpt;
     Controller *controller;
@@ -31,8 +29,8 @@ protected:
     void keyPressEvent(QKeyEvent *event);
     void resizeEvent(QResizeEvent * event);
 
-
-QSize actualSize;
+    QSize actualSize;
+    MyHistogram *histogram;
     QSplashScreen *splash;
     QActionGroup *alignmentGroup;
     QMenuBar *menuBar;
@@ -46,8 +44,6 @@ QSize actualSize;
     QAction *selectRegion;
     QAction *selectBronchi;
     QAction *histogramAct;
-    QLabel *infoLabel;
-    QTimer *m_timer;
 
 private :
 
@@ -55,12 +51,11 @@ private :
     void createMenus();
 
 private slots :
-    void updateImage();
     void openDirectory();
     void openSerie(int);
     void refreshBool();
-     void ShowContextMenu(const QPoint& pos);
-     void showHistogram();
+    void ShowContextMenu(const QPoint& pos);
+    void showHistogram();
 };
 
 

@@ -1,19 +1,4 @@
 #include "MyLabel.hpp"
-#include <QPushButton>
-#include <QApplication>
-#include <QKeyEvent>
-#include <sstream>
-#include <string>
-#include <dirent.h>
-#include <vector>
-#include <QAction>
-#include <QMenuBar>
-#include <QLayout>
-#include <QSignalMapper>
-#include <iostream>
-#include <QStatusBar>
-#include <QPainter>
-#include <QTimer>
 
 MyLabel::MyLabel(QWidget* parent)
 {
