@@ -25,67 +25,123 @@
 #include "itkSubtractImageFilter.h"
 #include "itkImageDuplicator.h"
 #include "itkImageToHistogramFilter.h"
-
-
-
+#include "itkNeighborhoodConnectedImageFilter.h"
+#include "itkBinaryErodeImageFilter.h"
+#include "itkBinaryMorphologicalOpeningImageFilter.h"
+#include "itkBinaryMorphologicalClosingImageFilter.h"
 #include "DICOMManager.hpp"
-
+#include "itkBinaryImageToShapeLabelMapFilter.h"
+#include "itkLabelMapToBinaryImageFilter.h"
 
 
 template<typename TImage, typename TLabelImage>
 static void SummarizeLabelStatistics (TImage* image,TLabelImage* labelImage);
 const  unsigned int Dimension = 2;
 
+DICOMMManager::ImageType::Pointer  DICOMMManager::removeBackground(ImageType::Pointer src){
+    typedef itk::NeighborhoodConnectedImageFilter<ImageType,
+            ImageType > ConnectedFilterType;
+    ConnectedFilterType::Pointer neighborhoodConnected
+            = ConnectedFilterType::New();
+
+    int wight = src->GetLargestPossibleRegion().GetSize()[0];
+    int height = src->GetLargestPossibleRegion().GetSize()[1];
+    typedef itk::SubtractImageFilter <ImageType, ImageType >
+            SubtractImageFilterType;
+    SubtractImageFilterType::Pointer subtractFilter
+            = SubtractImageFilterType::New ();
+
+    for(unsigned int i = 0; i <wight; i++)
+        for(unsigned int j = 0; j < height; j++)
+        {
+            if(i == 0 || j ==0 || i == wight-1 || j == height-1){
+                ImageType::IndexType pixelIndex;
+                pixelIndex[0] = i;
+                pixelIndex[1] = j;
+                int pixelValue = src->GetPixel(pixelIndex);
+                if(pixelValue == 255){
+                    neighborhoodConnected->SetInput(src);
+                    neighborhoodConnected->SetLower(2);
+                    neighborhoodConnected->SetUpper(255);
+                    ImageType::SizeType   radius;
+                    radius[0] = 0;
+                    radius[1] = 0;
+                    neighborhoodConnected->SetRadius(radius);
+                    ImageType::IndexType  index;
+                    index[0] = i;
+                    index[1] = j;
+                    neighborhoodConnected->SetSeed( index );
+                    neighborhoodConnected->SetReplaceValue(255);
+                    neighborhoodConnected->Update();
+
+                    subtractFilter->SetInput1(src);
+                    subtractFilter->SetInput2(neighborhoodConnected->GetOutput());
+                    subtractFilter->Update();
+                    src = subtractFilter->GetOutput();
+                    src->Update();
+                }
+            }
+        }
+    return src;
+}
+
+
 DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer src , int upperThreshold, int lowerThreshold){
     typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
-       BinaryThresholdImageFilterType;
+            BinaryThresholdImageFilterType;
+    BinaryThresholdImageFilterType::Pointer thresholdFilter
+            = BinaryThresholdImageFilterType::New();
+    thresholdFilter->SetInput(src);
+    thresholdFilter->SetLowerThreshold(lowerThreshold);
+    thresholdFilter->SetUpperThreshold(upperThreshold);
+    thresholdFilter->SetInsideValue(255);
+    thresholdFilter->SetOutsideValue(0);
+    thresholdFilter->Update();
+    //return thresholdFilter->GetOutput();
+    ImageType::Pointer dest = thresholdFilter->GetOutput();
 
-     BinaryThresholdImageFilterType::Pointer thresholdFilter
-       = BinaryThresholdImageFilterType::New();
-     thresholdFilter->SetInput(src);
-     thresholdFilter->SetLowerThreshold(lowerThreshold);
-     thresholdFilter->SetUpperThreshold(upperThreshold);
-     thresholdFilter->SetInsideValue(255);
-     thresholdFilter->SetOutsideValue(0);
-     thresholdFilter->Update();
-     return thresholdFilter->GetOutput();
+    dest = removeBackground(dest);
+    dest = lungSegementation(dest);
+    dest = fileHoleInBinary(dest);
+
+    return dest;
 }
 
 
 std::vector<int> DICOMMManager::getHistogram(int num){
     std::vector<int> actualHistogram;
     if(num < actualSerie.size()){
-    ImageType::Pointer src = actualSerie[num];
-    typedef itk::Statistics::ImageToHistogramFilter< ImageType >
-            ImageToHistogramFilterType;
+        ImageType::Pointer src = actualSerie[num];
+        typedef itk::Statistics::ImageToHistogramFilter< ImageType >
+                ImageToHistogramFilterType;
 
-    ImageToHistogramFilterType::HistogramType::MeasurementVectorType
-            lowerBound(src->GetImageDimension());
-    lowerBound.Fill(0);
+        ImageToHistogramFilterType::HistogramType::MeasurementVectorType
+                lowerBound(src->GetImageDimension());
+        lowerBound.Fill(0);
 
-    ImageToHistogramFilterType::HistogramType::MeasurementVectorType
-            upperBound(src->GetImageDimension());
-    upperBound.Fill(255) ;
+        ImageToHistogramFilterType::HistogramType::MeasurementVectorType
+                upperBound(src->GetImageDimension());
+        upperBound.Fill(255) ;
 
-    ImageToHistogramFilterType::HistogramType::SizeType
-            size(src->GetImageDimension());
-    size.Fill(255);
+        ImageToHistogramFilterType::HistogramType::SizeType
+                size(src->GetImageDimension());
+        size.Fill(255);
 
-    ImageToHistogramFilterType::Pointer imageToHistogramFilter =
-            ImageToHistogramFilterType::New();
-    imageToHistogramFilter->SetInput(src);
-    imageToHistogramFilter->SetHistogramBinMinimum(lowerBound);
-    imageToHistogramFilter->SetHistogramBinMaximum(upperBound);
-    imageToHistogramFilter->SetHistogramSize(size);
-    imageToHistogramFilter->Update();
-    ImageToHistogramFilterType::HistogramType* histogram =
-            imageToHistogramFilter->GetOutput();
-    const unsigned int histogramSize = histogram->Size();
+        ImageToHistogramFilterType::Pointer imageToHistogramFilter =
+                ImageToHistogramFilterType::New();
+        imageToHistogramFilter->SetInput(src);
+        imageToHistogramFilter->SetHistogramBinMinimum(lowerBound);
+        imageToHistogramFilter->SetHistogramBinMaximum(upperBound);
+        imageToHistogramFilter->SetHistogramSize(size);
+        imageToHistogramFilter->Update();
+        ImageToHistogramFilterType::HistogramType* histogram =
+                imageToHistogramFilter->GetOutput();
+        const unsigned int histogramSize = histogram->Size();
 
-    for( unsigned int bin=0; bin < histogramSize; bin++ )
-    {
-        actualHistogram.push_back(histogram->GetFrequency(bin, 0));
-    }   
+        for( unsigned int bin=0; bin < histogramSize; bin++ )
+        {
+            actualHistogram.push_back(histogram->GetFrequency(bin, 0));
+        }
     }
     return actualHistogram;
 }
@@ -117,104 +173,156 @@ QImage DICOMMManager::ITKImageToQImage(ImageType::Pointer myITKImage){
     return image_Qt;
 }
 
-DICOMMManager::ImageType::Pointer DICOMMManager::fillHoleInBinary(ImageType::Pointer src, int sizeMax){
-    int wight = src->GetLargestPossibleRegion().GetSize()[0];
-    int height = src->GetLargestPossibleRegion().GetSize()[1];
-    typedef itk::ImageDuplicator< ImageType > DuplicatorType;
-    DuplicatorType::Pointer duplicator = DuplicatorType::New();
-    duplicator->SetInputImage(src);
-    duplicator->Update();
-    ImageType::Pointer dest =  duplicator->GetOutput();
-    std::vector<ImageType::IndexType> indexs;
-    for(unsigned int i = 0; i < wight; i++)
+DICOMMManager::ImageType::Pointer DICOMMManager::fileHoleInBinary(ImageType::Pointer src){
+    typedef itk::BinaryBallStructuringElement<
+            ImageType::PixelType,2>                  StructuringElementType;
+
+    StructuringElementType structuringElementClose;
+    typedef itk::BinaryImageToShapeLabelMapFilter<ImageType> BinaryImageToShapeLabelMapFilterType;
+    BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter = BinaryImageToShapeLabelMapFilterType::New();
+
+    typedef itk::LabelMapToBinaryImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType,ImageType> LabelMapToBinaryImageFilterType;
+    LabelMapToBinaryImageFilterType::Pointer LabelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
+
+    typedef itk::InvertIntensityImageFilter <ImageType>
+            InvertIntensityImageFilterType;
+
+    InvertIntensityImageFilterType::Pointer invertIntensityFilter
+            = InvertIntensityImageFilterType::New();
+    InvertIntensityImageFilterType::Pointer invertIntensityFilter2
+            = InvertIntensityImageFilterType::New();
+
+
+    typedef BinaryImageToShapeLabelMapFilterType::OutputImageType LabelMapType;
+    std::vector<unsigned long> labelsToRemove;
+
+
+    structuringElementClose.SetRadius(10);
+    structuringElementClose.CreateStructuringElement();
+    BinaryImageToShapeLabelMapFilterType::OutputImageType *shapeLabel;
+
+
+
+    invertIntensityFilter->SetInput(src);
+    invertIntensityFilter->SetMaximum(255);
+    invertIntensityFilter->Update();
+
+    binaryImageToShapeLabelMapFilter->SetInput(invertIntensityFilter->GetOutput());
+    binaryImageToShapeLabelMapFilter->SetInputForegroundValue(255);
+    binaryImageToShapeLabelMapFilter->Update();
+    shapeLabel = binaryImageToShapeLabelMapFilter->GetOutput();
+    labelsToRemove.clear();
+    for(unsigned int i = 0; i < shapeLabel->GetNumberOfLabelObjects(); i++)
     {
-        bool alreadyPassIn = false;
-        indexs.clear();
-        for(unsigned int j = 0; j < height; j++)
-        {
-            ImageType::IndexType pixelIndex;
-            pixelIndex[0] = i;
-            pixelIndex[1] = j;
-            int pixelValue = src->GetPixel(pixelIndex);
-            if(pixelValue == 255){
-                if(indexs.size() > sizeMax)
-                    indexs.clear();
-                for(int k =0; k < indexs.size(); k++){
-                    dest->SetPixel(indexs[k],255);
-                }
-                indexs.clear();
-                if(!alreadyPassIn)
-                    alreadyPassIn = true;
-                dest->SetPixel(pixelIndex,255);
-            }
-            else{
-                if(alreadyPassIn)
-                    indexs.push_back(pixelIndex);
-                dest->SetPixel(pixelIndex,0);
-            }
-        }
+        BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = shapeLabel->GetNthLabelObject(i);
+        if(labelObject->Size() < 10000)
+            labelsToRemove.push_back(labelObject->GetLabel());
+
     }
-    for(unsigned int j = 0; j < height; j++)
+    for(unsigned int i = 0; i < labelsToRemove.size(); ++i)
     {
-        bool alreadyPassIn = false;
-        indexs.clear();
-        for(unsigned int i = 0; i < wight; i++)
-        {
-            ImageType::IndexType pixelIndex;
-            pixelIndex[0] = i;
-            pixelIndex[1] = j;
-            int pixelValue = dest->GetPixel(pixelIndex);
-            if(pixelValue == 255){
-                if(indexs.size() > sizeMax)
-                    indexs.clear();
-                for(int k =0; k < indexs.size(); k++){
-                    dest->SetPixel(indexs[k],255);
-                }
-                indexs.clear();
-                if(!alreadyPassIn)
-                    alreadyPassIn = true;
-                dest->SetPixel(pixelIndex,255);
-            }
-            else{
-                if(alreadyPassIn)
-                    indexs.push_back(pixelIndex);
-                dest->SetPixel(pixelIndex,0);
-            }
-        }
+        shapeLabel->RemoveLabel(labelsToRemove[i]);
     }
-    return dest;
+    LabelMapToBinaryImageFilter->SetInput(shapeLabel);
+    LabelMapToBinaryImageFilter->SetBackgroundValue(0);
+    LabelMapToBinaryImageFilter->SetForegroundValue(255);
+    LabelMapToBinaryImageFilter->Update();
+
+    invertIntensityFilter2->SetInput(LabelMapToBinaryImageFilter->GetOutput());
+    invertIntensityFilter2->SetMaximum(255);
+    invertIntensityFilter2->Update();
+
+    return invertIntensityFilter2->GetOutput();
+
 }
 
-/*
-DICOMMManager::ImageType::Pointer DICOMMManager::QTimageToITKImage(QImage image){
-    ImageType::Pointer myITKImage = ImageType::New();
-    int wight = image.width();
-    int height = image.height();
-    const ImageType::SizeType  size  = {{wight, height}};
-    const ImageType::IndexType start = {{ 0, 0}};
-    ImageType::RegionType region;
-    region.SetSize(size);
-    region.SetIndex(start);
 
-    myITKImage->SetRegions( region );
-    myITKImage->Allocate(true);
+DICOMMManager::ImageType::Pointer DICOMMManager::lungSegementation(ImageType::Pointer src){
+    typedef itk::BinaryBallStructuringElement<
+            ImageType::PixelType,2>                  StructuringElementType;
 
+    StructuringElementType structuringElementClose;
+    typedef itk::BinaryMorphologicalClosingImageFilter <ImageType, ImageType, StructuringElementType>
+            BinaryMorphologicalClosingImageFilterType;
+    BinaryMorphologicalClosingImageFilterType::Pointer closingFilter
+            = BinaryMorphologicalClosingImageFilterType::New();
+    typedef itk::BinaryImageToShapeLabelMapFilter<ImageType> BinaryImageToShapeLabelMapFilterType;
+    BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter = BinaryImageToShapeLabelMapFilterType::New();
+    typedef itk::LabelMapToBinaryImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType,ImageType> LabelMapToBinaryImageFilterType;
+    LabelMapToBinaryImageFilterType::Pointer LabelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
+    BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter2 = BinaryImageToShapeLabelMapFilterType::New();
+    LabelMapToBinaryImageFilterType::Pointer LabelMapToBinaryImageFilter2 = LabelMapToBinaryImageFilterType::New();
 
-    for(unsigned int i = 0; i < wight; i++)
+    std::vector<unsigned long> labelsToRemove;
+    structuringElementClose.SetRadius(2);
+    structuringElementClose.CreateStructuringElement();
+    BinaryImageToShapeLabelMapFilterType::OutputImageType *shapeLabel;
+
+    binaryImageToShapeLabelMapFilter->SetInput(src);
+    binaryImageToShapeLabelMapFilter->SetInputForegroundValue(255);
+    binaryImageToShapeLabelMapFilter->Update();
+    shapeLabel = binaryImageToShapeLabelMapFilter->GetOutput();
+    for(unsigned int i = 0; i < shapeLabel->GetNumberOfLabelObjects(); i++)
     {
-        for(unsigned int j = 0; j < height; j++)
+        BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = shapeLabel->GetNthLabelObject(i);
+        if(labelObject->Size() < 40)
+            labelsToRemove.push_back(labelObject->GetLabel());
+    }
+    for(unsigned int i = 0; i < labelsToRemove.size(); ++i)
+    {
+        shapeLabel->RemoveLabel(labelsToRemove[i]);
+    }
+    LabelMapToBinaryImageFilter->SetInput(shapeLabel);
+    LabelMapToBinaryImageFilter->SetBackgroundValue(0);
+    LabelMapToBinaryImageFilter->SetForegroundValue(255);
+    LabelMapToBinaryImageFilter->Update();
+
+
+    closingFilter->SetInput(LabelMapToBinaryImageFilter->GetOutput());
+    closingFilter->SetKernel(structuringElementClose);
+    closingFilter->SetForegroundValue(255);
+    closingFilter->Update();
+
+    labelsToRemove.clear();
+    BinaryImageToShapeLabelMapFilterType::OutputImageType *shapeLabel2;
+    binaryImageToShapeLabelMapFilter2->SetInput(closingFilter->GetOutput());
+    binaryImageToShapeLabelMapFilter2->SetInputForegroundValue(255);
+    binaryImageToShapeLabelMapFilter2->Update();
+    shapeLabel2 = binaryImageToShapeLabelMapFilter2->GetOutput();
+    if(shapeLabel2->GetNumberOfLabelObjects() > 2){
+        int max1 = 0;
+        int max2 = 0;
+        for(unsigned int i = 0; i < shapeLabel2->GetNumberOfLabelObjects(); i++)
         {
-            ImageType::IndexType pixelIndex;
-            pixelIndex[0] = i;
-            pixelIndex[1] = j;
-            QRgb value = image.pixel(i,j);
-            int pixelValue = qRed(value);
-            myITKImage->SetPixel(pixelIndex,pixelValue);
+            BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject2 = shapeLabel2->GetNthLabelObject(i);
+            if(labelObject2->Size() > max1){
+                max2 = max1;
+                max1 = labelObject2->Size();
+            }
+            if(labelObject2->Size() > max2 && labelObject2->Size() < max1)
+                max2 = labelObject2->Size();
+        }
+        for(unsigned int i = 0; i < shapeLabel2->GetNumberOfLabelObjects(); i++)
+        {
+            BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject2 = shapeLabel2->GetNthLabelObject(i);
+            if(labelObject2->Size() < max2)
+                labelsToRemove.push_back(labelObject2->GetLabel());
+        }
+        for(unsigned int i = 0; i < labelsToRemove.size(); ++i)
+        {
+            shapeLabel2->RemoveLabel(labelsToRemove[i]);
         }
     }
-    return myITKImage;
+    LabelMapToBinaryImageFilter2->SetInput(shapeLabel2);
+    LabelMapToBinaryImageFilter2->SetBackgroundValue(0);
+    LabelMapToBinaryImageFilter2->SetForegroundValue(255);
+    LabelMapToBinaryImageFilter2->Update();
+
+
+
+    return  LabelMapToBinaryImageFilter2->GetOutput();
 }
-*/
+
 
 DICOMMManager::ImageType::Pointer DICOMMManager::smoothImage(ImageType::Pointer src){
     typedef   float InternalPixelType;
@@ -256,18 +364,18 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractSelectedRegion(ImageType
 
     castFilterIn->SetInput(src);
     castFilterIn->Update();
-
+    /*
     smoothing->SetInput( castFilterIn->GetOutput() );
     smoothing->SetNumberOfIterations( 5 );
     smoothing->SetTimeStep( 0.125 );
     smoothing->Update();
-
-    confidenceConnected->SetMultiplier( 5 );
+*/
+    confidenceConnected->SetMultiplier(5);
     confidenceConnected->SetNumberOfIterations(5);
     confidenceConnected->SetReplaceValue(255);
     confidenceConnected->SetSeed( index );
-    confidenceConnected->SetInitialNeighborhoodRadius(2);
-    confidenceConnected->SetInput( smoothing->GetOutput() );
+    confidenceConnected->SetInitialNeighborhoodRadius(1);
+    confidenceConnected->SetInput( castFilterIn->GetOutput() );
     confidenceConnected->Update();
 
     castFilterOut->SetInput(confidenceConnected->GetOutput());
@@ -293,7 +401,7 @@ DICOMMManager::ImageType::Pointer DICOMMManager::enhanceSelectedRegion(ImageType
     ImageType::Pointer selectRegion = extractSelectedRegion(src , seedPosX, seedPosY);
 
 
-    ImageType::Pointer regionWithoutHole = fillHoleInBinary(selectRegion,30);
+    ImageType::Pointer regionWithoutHole = fileHoleInBinary(selectRegion);
 
     maskFilter->SetInput(src);
     maskFilter->SetMaskImage(regionWithoutHole);
@@ -320,7 +428,7 @@ DICOMMManager::ImageType::Pointer DICOMMManager::extractBronchiInRegion(ImageTyp
     MaskFilterType::Pointer maskFilter = MaskFilterType::New();
 
     ImageType::Pointer selectRegion = extractSelectedRegion(src , seedPosX, seedPosY);
-    ImageType::Pointer regionWithoutHole = fillHoleInBinary(selectRegion,30);
+    ImageType::Pointer regionWithoutHole = fileHoleInBinary(selectRegion);
 
     subtractFilter->SetInput1(regionWithoutHole);
     subtractFilter->SetInput2(selectRegion);
@@ -478,7 +586,7 @@ DICOMMManager::ImageType::Pointer DICOMMManager::rescale(ImageType::Pointer myIT
 DICOMMManager::ImageType::Pointer DICOMMManager::getImageFromSerie(int num){
     ImageType::Pointer Null;
     if(num < actualSerie.size() && num >= 0)
-        return rescale(smoothImage(actualSerie[num]));
+        return actualSerie[num];
     return Null;
 }
 
@@ -592,7 +700,7 @@ void DICOMMManager::loadDICOMSerie(std::string seriesIdentifier,
 
         //--------------------------------------------------
         ImageType::Pointer myITKImage = reader->GetOutput();
-        myITKImage = rescale(myITKImage);
+        myITKImage = rescale(smoothImage(myITKImage));
         actualSerie.push_back(myITKImage);
     }
 

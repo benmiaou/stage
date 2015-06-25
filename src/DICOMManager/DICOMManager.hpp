@@ -30,10 +30,12 @@ public :
     ImageType::Pointer threshold(ImageType::Pointer src, int upperThreshold, int lowerThreshold);
 
 private :
+    ImageType::Pointer fileHoleInBinary(ImageType::Pointer src);
+    ImageType::Pointer  removeBackground(ImageType::Pointer src);
     ImageType::Pointer smoothImage(ImageType::Pointer src);
     ImageType::Pointer rescale(ImageType::Pointer myITKImage);
     ImageType::Pointer zoom(ImageType::Pointer image, double factor, int posX, int posY);
-    ImageType::Pointer fillHoleInBinary(ImageType::Pointer src, int sizeMax);
+    ImageType::Pointer lungSegementation(ImageType::Pointer src);
     ImageType::Pointer extractSelectedRegion(ImageType::Pointer src ,int startX,int startY);
     ImageType::Pointer loadDICOM(std::string filename);
     std::vector<ImageType::Pointer> getDICOMDirectory(std::string directoryName);
