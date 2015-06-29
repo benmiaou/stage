@@ -11,6 +11,7 @@
 #include "MyLabel.hpp"
 #include "MyHistogram.hpp"
 #include "Controller.hpp"
+#include "My3Dviewer.h"
 
 class MyWindow : public QMainWindow
 {
@@ -21,6 +22,7 @@ public:
 protected:
     int cpt;
     Controller *controller;
+    My3Dviewer *viewer3D;
     std::vector<std::string> series;
     std::string actualDirectory;
     QLabel* myLabel;
@@ -44,6 +46,7 @@ protected:
     QAction *selectRegion;
     QAction *selectBronchi;
     QAction *histogramAct;
+    QAction *view3DAct;
 
 private :
 
@@ -51,6 +54,7 @@ private :
     void createMenus();
 
 private slots :
+    void view3D();
     void openDirectory();
     void openSerie(int);
     void refreshBool();

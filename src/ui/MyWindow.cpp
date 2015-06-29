@@ -15,9 +15,10 @@
 MyWindow::MyWindow(Controller *controller)
 {
     this->setFocusPolicy(Qt::StrongFocus);
-    this->controller = controller;
+    this->controller = controller;  
     myLabel = new QLabel(this);
     myDrawer = new MyLabel(this);
+    viewer3D = new My3Dviewer(this);
     menuBar = new QMenuBar();
     menuBar->setNativeMenuBar(false);
     controller->setMenuBar(menuBar);
@@ -47,6 +48,16 @@ void MyWindow::showHistogram(){
         if (!image_Qt.isNull()){
             histogram->show();
             histogram->update();
+
+        }
+    }
+}
+
+void MyWindow::view3D(){
+    if(myLabel->pixmap() != NULL){
+        QImage image_Qt = myLabel->pixmap()->toImage();
+        if (!image_Qt.isNull()){
+            viewer3D->creatScene(controller);
 
         }
     }
@@ -86,6 +97,10 @@ void MyWindow::createActions()
     histogramAct = new QAction(tr("&Show Histogram"), this);
     histogramAct->setStatusTip(tr("Show Histogram"));
     connect(histogramAct, SIGNAL(triggered()),this ,SLOT(showHistogram()));
+
+    view3DAct = new QAction(tr("&Show 3D View"), this);
+    view3DAct->setStatusTip(tr("Show 3D View"));
+    connect(view3DAct, SIGNAL(triggered()),this ,SLOT(view3D()));
 }
 void MyWindow::refreshBool (){
     controller->refreshBool(edgesAct->isChecked(),zoneAct->isChecked(),contrastAct->isChecked(),selectRegion->isChecked(),selectBronchi->isChecked());
@@ -109,6 +124,7 @@ void MyWindow::createMenus()
     processMenu->addAction(edgesAct);
     processMenu->addAction(contrastAct);
     processMenu->addAction(histogramAct);
+    processMenu->addAction(view3DAct);
 }
 
 void MyWindow::openDirectory(){

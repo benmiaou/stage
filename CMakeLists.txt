@@ -45,7 +45,7 @@ src/ui/MyLabel.cpp
 src/ui/MyWindow.cpp
 src/ui/MyHistogram.cpp
 src/ui/MyScrollBar.cpp
-
+src/ui/My3Dviewer.cpp
 src/Controller/Controller.hpp
 src/DICOMManager/DICOMManager.hpp
 src/ui/MyLabel.hpp
@@ -54,6 +54,7 @@ src/ui/MyScrollBar.h
 set(MYPROJECT_CURRENT_HEADERS
 src/ui/MyWindow.hpp
 src/ui/MyHistogram.hpp
+src/ui/My3Dviewer.h
 )
 qt4_wrap_cpp(mocFiles ${MYPROJECT_CURRENT_HEADERS})
 

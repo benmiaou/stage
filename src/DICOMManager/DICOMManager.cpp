@@ -91,6 +91,9 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
             BinaryThresholdImageFilterType;
     BinaryThresholdImageFilterType::Pointer thresholdFilter
             = BinaryThresholdImageFilterType::New();
+    typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
+    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+
     thresholdFilter->SetInput(src);
     thresholdFilter->SetLowerThreshold(lowerThreshold);
     thresholdFilter->SetUpperThreshold(upperThreshold);
@@ -103,8 +106,11 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
     dest = removeBackground(dest);
     dest = lungSegementation(dest);
     dest = fileHoleInBinary(dest);
+    maskFilter->SetInput(src);
+    maskFilter->SetMaskImage(dest);
+    maskFilter->Update();
 
-    return dest;
+    return enhanceContrast(rescale(maskFilter->GetOutput()));
 }
 
 
