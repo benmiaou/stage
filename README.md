@@ -20,6 +20,7 @@ Processing Menu :
   - histogram window menu :
     - Apply threshold : apply threshold with the selected value with the scroll bars.
     - Show Threshold : Show the part of the histogram out of the thershold selection.
+ -Show 3D View : Show 3D view of the current serie (use after threshold, only show pixel value > 220)
 
 Commands :
  - MouseWheel or ArrowKeys : switch image.
