@@ -6,6 +6,7 @@
 #include "Controller.hpp"
 #include "MyScrollBar.h"
 #include "DGtal/io/viewers/Viewer3D.h"
+#include "MyHistogramLabel.hpp"
 
 using namespace DGtal;
 using namespace Z3i;
@@ -21,16 +22,21 @@ protected:
    int  actualUpper;
     int actualLower;
     Viewer3D<> *viewer;
+    MyHistogramLabel *histogramLabel;
     Controller *controller;
     MyScrollBar *scrollBarMin;
     MyScrollBar *scrollBarMax;
     QPainter *painter;
     QAction *Threshold;
     QAction *showThreshold;
+    QAction *histogramType1;
+    QAction *histogramType2;
+    QAction *histogramType3;
     QTimer *m_timer;
     std::vector< std::vector<int> > histograms;
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
+    void update3D();
 private slots :
     void activateThreshold();
 };

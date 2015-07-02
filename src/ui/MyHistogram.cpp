@@ -24,6 +24,9 @@ MyHistogram::MyHistogram(Controller *controller)
     QVBoxLayout *layout2 = new QVBoxLayout();
     viewer = new Viewer3D<>();
     viewer->setParent(this);
+    histogramLabel = new MyHistogramLabel(this);
+    histogramLabel->resize(this->size());
+    layout2->addWidget(histogramLabel);
     layout2->addWidget(viewer);
     layout2->setSpacing(25);
     layout->addLayout(layout2);
@@ -36,6 +39,7 @@ MyHistogram::MyHistogram(Controller *controller)
     centralWidget->setLayout(layout);
 
     QMenuBar *menuBar = new QMenuBar();
+
     QMenu *processMenu =  menuBar->addMenu(tr("&Action"));
     Threshold = new QAction(tr("&Apply Threshold"), this);
     Threshold->setStatusTip(tr("Apply Threshold"));
@@ -45,6 +49,28 @@ MyHistogram::MyHistogram(Controller *controller)
     showThreshold->setStatusTip(tr("Show Threshold"));
     showThreshold->setCheckable(true);
     connect(showThreshold, SIGNAL(triggered()),this ,SLOT(update()));
+
+    QMenu *histogramMenu =  menuBar->addMenu(tr("&Histogram Type"));
+    QActionGroup* histogramType = new QActionGroup(this);
+    histogramType1 = new QAction(tr("&Current 2D"), this);
+    histogramType1->setStatusTip(tr("Current 2D"));
+    histogramType1->setCheckable(true);
+    histogramType1->setChecked(true);
+    histogramType1->setActionGroup(histogramType);
+
+    histogramType2 = new QAction(tr("&Total 2D"), this);
+    histogramType2->setStatusTip(tr("Total 2D"));
+    histogramType2->setCheckable(true);
+    histogramType2->setActionGroup(histogramType);
+
+    histogramType3 = new QAction(tr("&3D"), this);
+    histogramType3->setStatusTip(tr("3D"));
+    histogramType3->setCheckable(true);
+    histogramType3->setActionGroup(histogramType);
+
+
+    histogramMenu->addActions(histogramType->actions());
+
     processMenu->addAction(Threshold);
     processMenu->addAction(showThreshold);
     this->setMenuBar(menuBar);
@@ -62,8 +88,8 @@ void MyHistogram::updateHistogram(){
     histograms = controller->getHistograms();
 }
 
-void MyHistogram::paintEvent(QPaintEvent *event)
-{    
+void MyHistogram::update3D(){
+
     viewer->clear();
     viewer->setSizeIncrement(0,0);
     int minVal = scrollBarMin->value();
@@ -86,14 +112,47 @@ void MyHistogram::paintEvent(QPaintEvent *event)
         }
     *viewer<< Viewer3D<>::updateDisplay;
     viewer->update();
+}
+
+
+void MyHistogram::paintEvent(QPaintEvent *event)
+{
+    int minVal = scrollBarMin->value();
+    int maxVal = scrollBarMax->value();
     if(minVal != actualLower)
         if(minVal > maxVal)
             scrollBarMax->setValue(minVal);
     if(maxVal != actualUpper)
         if(minVal > maxVal)
             scrollBarMin->setValue(maxVal);
+    minVal = scrollBarMin->value();
+    maxVal = scrollBarMax->value();
+    if(histogramType3->isChecked()){
+        viewer->show();
+        update3D();
+        histogramLabel->hide();
+    }
+    else{
+        viewer->hide();
+        histogramLabel->show();
+        std::vector<int> histogram;
+        if(histogramType1->isChecked())
+            histogram = histograms[controller->getCurrent()];
+        else{
+            for(int j=0; j<histograms[0].size(); j++)
+                for(int i=0; i<histograms.size() ; i++){
+                    if(histogram.size() > j)
+                        histogram[j] += histograms[i][j];
+                    else
+                        histogram.push_back(histograms[i][j]);
+                }
+        }
+        histogramLabel->selectedMinMax(minVal,maxVal);
+        histogramLabel->updateHistogram(histogram);
+    }
     controller->setThreshold(scrollBarMax->value(),scrollBarMin->value());
 }
+
 
 void MyHistogram::closeEvent(QCloseEvent *event)
 {

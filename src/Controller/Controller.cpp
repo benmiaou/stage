@@ -26,6 +26,9 @@ void Controller::changeThreshold (int thresholdModifier){
         threshold += thresholdModifier;
 }
 
+int Controller::getCurrent(){
+    return numActualImage;
+}
 
 void Controller::setThreshold(int max, int min){
     if(upperThreshold != max || lowerThreshold != min){

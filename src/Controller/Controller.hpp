@@ -27,6 +27,7 @@ class Controller : public QMainWindow
     void activeThreshold(bool isActive);
     QImage getDicom(int num,float ratio);
     std::vector< std::vector<int> > getHistograms();
+    int getCurrent();
 
  protected :
 
