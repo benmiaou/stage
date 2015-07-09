@@ -133,29 +133,41 @@ DICOMMManager::ImageType::Pointer  DICOMMManager::getConvexHull(ImageType::Point
 
     }
     P = convex_hull(P);
-    for(unsigned int i = 0; i < P.size(); i++){
+    for(unsigned int i = 1; i < P.size(); i++){
 
         ImageType::IndexType nextPixelIndex;
-        nextPixelIndex[0] = P[i+1].x;
-        nextPixelIndex[1] = P[i+1].y;
+        nextPixelIndex[0] = P[i-1].x;
+        nextPixelIndex[1] = P[i-1].y;
 
-        int actualX =  P[i].x;
-        int actualY =  P[i].y;
+
+        float actualX =  P[i].x;
+        float actualY =  P[i].y;
+        float startY = actualY;
+        float startX = actualX;
+        float ratioX = fabs((nextPixelIndex[0]-startX)/(nextPixelIndex[1]-startY));
+        float ratioY = fabs((nextPixelIndex[1]-startY)/(nextPixelIndex[0]-startX));
+        if(ratioX > 1 || ratioX==0)
+            ratioX = 1;
+        if(ratioY > 1 || ratioY==0)
+            ratioY = 1;
         if(nextPixelIndex[0] > 15 && nextPixelIndex[1] > 15){
-            while(actualX != nextPixelIndex[0] || actualY != nextPixelIndex[1] ){
+            while((int)actualX != nextPixelIndex[0] || (int)actualY != nextPixelIndex[1] ){
                 ImageType::IndexType pixelIndex;
-                pixelIndex[0] = actualX;
-                pixelIndex[1] = actualY;
+                pixelIndex[0] = (int)actualX;
+                pixelIndex[1] = (int)actualY;
                 dest->SetPixel(pixelIndex, 255);
-                if(nextPixelIndex[0]-actualX != 0)
-                    actualX += (nextPixelIndex[0]-actualX)/abs(actualX-nextPixelIndex[0]);
-                if(nextPixelIndex[1]-actualY != 0)
-                    actualY += (nextPixelIndex[1]-actualY)/abs(actualY-nextPixelIndex[1]);
+
+                if(nextPixelIndex[0]-(int)actualX != 0){
+                        actualX += (((nextPixelIndex[0]-(int)actualX))/abs((nextPixelIndex[0]-(int)actualX))) * ratioX;
+                }
+                if(nextPixelIndex[1]-(int)actualY != 0){
+                        actualY += ((nextPixelIndex[1]-(int)actualY)/abs((int)actualY-nextPixelIndex[1])) *  ratioY;
+                }
             }
         }
     }
 
-/*
+
     for(unsigned int i = 0; i < wight; i++)
     {
         bool isIn = false;
@@ -175,7 +187,7 @@ DICOMMManager::ImageType::Pointer  DICOMMManager::getConvexHull(ImageType::Point
             if(isIn)
                 dest->SetPixel(pixelIndex,255);
         }
-    }*/
+    }
     return dest;
 }
 
@@ -346,9 +358,9 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
 
     dest = convexHull(dest);
     dest->SetSpacing(src->GetSpacing());
-     maskFilter->SetInput(src);
-     maskFilter->SetMaskImage(dest);
-     maskFilter->Update();
+    maskFilter->SetInput(src);
+    maskFilter->SetMaskImage(dest);
+    maskFilter->Update();
     return enhanceContrast(rescale(maskFilter->GetOutput()));
 }
 
