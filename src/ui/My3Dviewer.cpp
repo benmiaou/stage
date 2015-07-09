@@ -1,28 +1,29 @@
 #include "My3Dviewer.h"
 #include <QImage>
 #include <QColor>
+#include <QLayout>
 
 My3Dviewer::My3Dviewer(QWidget *parent)
 {
-    this->show();
     viewer = new Viewer3D<>();
     viewer->setParent(this);
-     viewer->update();
+    viewer->update();
     viewer->show();
-    //this->setParent(parent);
+    this->hide();
+    QVBoxLayout *layout = new QVBoxLayout();
+    layout->addWidget(viewer);
+    this->setLayout(layout);
 }
+
+
+
 
 
 void My3Dviewer::creatScene(Controller *controller)
 {
    // std::cout << " TEST " << std::endl;
-     viewer->update();
     viewer->clear();
-    viewer->setSizeIncrement(0,0);
-    Point p1( 0, 0, 0 );
-    Point p2( 10, 10 , 10 );
-    Domain domain( p1, p2 );
-    *viewer << domain;
+    this->show();
     int num = 75;
     QImage image_Qt = controller->getDicom(num,1);
     while(!image_Qt.isNull() && num < 450){
@@ -35,7 +36,7 @@ void My3Dviewer::creatScene(Controller *controller)
             {
 
                 QRgb color = image_Qt.pixel(i,j);
-                if(qGray(color) > 220){
+                if(qGray(color) > 150){
                     Point p = Point(i,j,num);
                     *viewer << p;
                     *viewer <<  CustomColors3D( Color(qGray(color),num%255,(i+j)%255), Color(qGray(color),num%255,(i+j)%255) );
@@ -46,6 +47,6 @@ void My3Dviewer::creatScene(Controller *controller)
         image_Qt = controller->getDicom(num,1);
     }
     *viewer<< Viewer3D<>::updateDisplay;
-    viewer->update();
-    viewer->show();
+
+
 }

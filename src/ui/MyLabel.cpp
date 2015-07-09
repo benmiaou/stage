@@ -40,7 +40,6 @@ void MyLabel::paintEvent(QPaintEvent *event)
             painter.drawRect(selectedRectangle);
         }
     }
-
 }
 void MyLabel::mousePressEvent(QMouseEvent *event){
     if(event->buttons() == Qt::LeftButton && event->modifiers().testFlag(Qt::ShiftModifier)){

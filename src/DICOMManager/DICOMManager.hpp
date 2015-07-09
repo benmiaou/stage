@@ -30,6 +30,8 @@ public :
     ImageType::Pointer threshold(ImageType::Pointer src, int upperThreshold, int lowerThreshold);
 
 private :
+    ImageType::Pointer  getConvexHull(ImageType::Pointer src);
+    ImageType::Pointer  convexHull(ImageType::Pointer src);
     ImageType::Pointer fileHoleInBinary(ImageType::Pointer src);
     ImageType::Pointer  removeBackground(ImageType::Pointer src);
     ImageType::Pointer smoothImage(ImageType::Pointer src);

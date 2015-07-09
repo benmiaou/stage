@@ -89,9 +89,7 @@ void MyHistogram::updateHistogram(){
 }
 
 void MyHistogram::update3D(){
-
     viewer->clear();
-    viewer->setSizeIncrement(0,0);
     int minVal = scrollBarMin->value();
     int maxVal = scrollBarMax->value();
     for(int i=0; i<histograms.size() ; i++)
@@ -111,7 +109,6 @@ void MyHistogram::update3D(){
                 viewer->addLine(pBL,pTL,1);
         }
     *viewer<< Viewer3D<>::updateDisplay;
-    viewer->update();
 }
 
 

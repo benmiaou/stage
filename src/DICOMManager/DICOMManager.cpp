@@ -38,11 +38,245 @@ template<typename TImage, typename TLabelImage>
 static void SummarizeLabelStatistics (TImage* image,TLabelImage* labelImage);
 const  unsigned int Dimension = 2;
 
+//https://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain
+typedef double coord_t;
+typedef double coord2_t;
+struct Point {
+    coord_t x, y;
+
+    bool operator <(const Point &p) const {
+        return x < p.x || (x == p.x && y < p.y);
+    }
+};
+
+coord2_t cross(const Point &O, const Point &A, const Point &B)
+{
+    return (long)(A.x - O.x) * (B.y - O.y) - (long)(A.y - O.y) * (B.x - O.x);
+}
+
+std::vector<Point> convex_hull(std::vector<Point> P)
+{
+    int n = P.size(), k = 0;
+    std::vector<Point> H(2*n);
+
+    // Sort points lexicographically
+    std::sort(P.begin(), P.end());
+
+    // Build lower hull
+    for (int i = 0; i < n; ++i) {
+        while (k >= 2 && cross(H[k-2], H[k-1], P[i]) <= 0) k--;
+        H[k++] = P[i];
+    }
+
+    // Build upper hull
+    for (int i = n-2, t = k+1; i >= 0; i--) {
+        while (k >= t && cross(H[k-2], H[k-1], P[i]) <= 0) k--;
+        H[k++] = P[i];
+    }
+
+    H.resize(k);
+    return H;
+}
+//-----------------------------------------------------------------------------------------------------
+
+DICOMMManager::ImageType::Pointer  DICOMMManager::getConvexHull(ImageType::Pointer src){
+    int wight = src->GetLargestPossibleRegion().GetSize()[0];
+    int height = src->GetLargestPossibleRegion().GetSize()[1];
+    ImageType::Pointer dest = ImageType::New();
+    ImageType::RegionType region;
+    ImageType::IndexType start;
+    start[0] = 0;
+    start[1] = 0;
+    ImageType::SizeType size;
+    unsigned int NumRows = wight;
+    unsigned int NumCols = height;
+    size[0] = NumRows;
+    size[1] = NumCols;
+    region.SetSize(size);
+    region.SetIndex(start);
+    dest->SetRegions(region);
+    dest->SetOrigin(src->GetOrigin());
+    dest->Allocate();
+
+    for(unsigned int i = 0; i <wight; i++)
+        for(unsigned int j = 0; j < height; j++)
+        {
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            dest->SetPixel(pixelIndex,0);
+        }
+    std::vector<Point> P;
+    for(unsigned int i = 0; i < wight; i++)
+    {
+        for(unsigned int j = 1; j < height-1; j++)
+        {
+            ImageType::IndexType pixelIndexBef;
+            pixelIndexBef[0] = i;
+            pixelIndexBef[1] = j-1;
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            ImageType::IndexType pixelIndexAft;
+            pixelIndexAft[0] = i;
+            pixelIndexAft[1] = j+1;
+            int pixelValueBef = src->GetPixel(pixelIndexBef);
+            int pixelValue = src->GetPixel(pixelIndex);
+            int pixelValueAft = src->GetPixel(pixelIndexAft);
+            if(pixelValue == 255 && (pixelValueBef == 0 || pixelValueAft == 0)){
+                Point p;
+                p.x = i;
+                p.y = j;
+                P.push_back(p);
+            }
+        }
+
+    }
+    P = convex_hull(P);
+    for(unsigned int i = 0; i < P.size(); i++){
+
+        ImageType::IndexType nextPixelIndex;
+        nextPixelIndex[0] = P[i+1].x;
+        nextPixelIndex[1] = P[i+1].y;
+
+        int actualX =  P[i].x;
+        int actualY =  P[i].y;
+        if(nextPixelIndex[0] > 15 && nextPixelIndex[1] > 15){
+            while(actualX != nextPixelIndex[0] || actualY != nextPixelIndex[1] ){
+                ImageType::IndexType pixelIndex;
+                pixelIndex[0] = actualX;
+                pixelIndex[1] = actualY;
+                dest->SetPixel(pixelIndex, 255);
+                if(nextPixelIndex[0]-actualX != 0)
+                    actualX += (nextPixelIndex[0]-actualX)/abs(actualX-nextPixelIndex[0]);
+                if(nextPixelIndex[1]-actualY != 0)
+                    actualY += (nextPixelIndex[1]-actualY)/abs(actualY-nextPixelIndex[1]);
+            }
+        }
+    }
+
+/*
+    for(unsigned int i = 0; i < wight; i++)
+    {
+        bool isIn = false;
+        for(unsigned int j = 1; j < height-1; j++)
+        {
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            int pixelValue = dest->GetPixel(pixelIndex);
+            ImageType::IndexType nextPixelIndex;
+            nextPixelIndex[0] = i;
+            nextPixelIndex[1] = j+1;
+            int nextPixelValue = dest->GetPixel(nextPixelIndex);
+
+            if(pixelValue == 255 && nextPixelValue!=255)
+                isIn = !isIn;
+            if(isIn)
+                dest->SetPixel(pixelIndex,255);
+        }
+    }*/
+    return dest;
+}
+
+
+//-------------------------------------------------------------------------------------------------------------
+
+DICOMMManager::ImageType::Pointer  DICOMMManager::convexHull(ImageType::Pointer src){
+    typedef itk::BinaryImageToShapeLabelMapFilter<ImageType> BinaryImageToShapeLabelMapFilterType;
+    BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter = BinaryImageToShapeLabelMapFilterType::New();
+    typedef BinaryImageToShapeLabelMapFilterType::OutputImageType LabelMapType;
+    typedef BinaryImageToShapeLabelMapFilterType::LabelObjectType LabelObjectType;
+
+    typedef itk::LabelMapToBinaryImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType,ImageType> LabelMapToBinaryImageFilterType;
+    LabelMapToBinaryImageFilterType::Pointer LabelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
+    LabelMapToBinaryImageFilterType::Pointer LabelMapToBinaryImageFilter2 = LabelMapToBinaryImageFilterType::New();
+    typedef itk::AddImageFilter <ImageType, ImageType >
+            AddImageFilterType;
+    AddImageFilterType::Pointer addFilter
+            = AddImageFilterType::New ();
+
+    int wight = src->GetLargestPossibleRegion().GetSize()[0];
+    int height = src->GetLargestPossibleRegion().GetSize()[1];
+    ImageType::Pointer lung1 = ImageType::New();
+    ImageType::Pointer lung2 = ImageType::New();
+    ImageType::RegionType region;
+    ImageType::IndexType start;
+    start[0] = 0;
+    start[1] = 0;
+    ImageType::SizeType size;
+    unsigned int NumRows = wight;
+    unsigned int NumCols = height;
+    size[0] = NumRows;
+    size[1] = NumCols;
+
+    region.SetSize(size);
+    region.SetIndex(start);
+    lung1->SetRegions(region);
+    lung1->SetOrigin(src->GetOrigin());
+    lung1->SetSpacing(src->GetSpacing());
+    lung1->Allocate();
+
+
+    lung2->SetRegions(region);
+    lung2->SetOrigin(src->GetOrigin());
+    lung2->SetSpacing(src->GetSpacing());
+    lung2->Allocate();
+    BinaryImageToShapeLabelMapFilterType::OutputImageType *shapeLabel;
+
+    for(unsigned int i = 0; i <wight; i++)
+        for(unsigned int j = 0; j < height; j++)
+        {
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            lung1->SetPixel(pixelIndex,0);
+            lung2->SetPixel(pixelIndex,0);
+        }
+    //------------------------------------------------------------------------------------------
+    binaryImageToShapeLabelMapFilter->SetInput(src);
+    binaryImageToShapeLabelMapFilter->SetInputForegroundValue(255);
+    binaryImageToShapeLabelMapFilter->Update();
+
+    shapeLabel = binaryImageToShapeLabelMapFilter->GetOutput();
+    if(shapeLabel->GetNumberOfLabelObjects() != 2)
+        return src;
+
+    for(unsigned int i = 0; i < binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++)
+    {
+        LabelObjectType::Pointer labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
+        for(unsigned int pixelId = 0; pixelId < labelObject->Size(); pixelId++)
+        {
+            if(i==0)
+                lung1->SetPixel(labelObject->GetIndex(pixelId),255);
+            else
+                lung2->SetPixel(labelObject->GetIndex(pixelId),255);
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+
+    addFilter->SetInput1(getConvexHull(lung1));
+    addFilter->SetInput2(getConvexHull(lung2));
+    addFilter->Update();
+
+    return addFilter->GetOutput();
+
+}
+
+
+
+
+
+
 DICOMMManager::ImageType::Pointer  DICOMMManager::removeBackground(ImageType::Pointer src){
     typedef itk::NeighborhoodConnectedImageFilter<ImageType,
             ImageType > ConnectedFilterType;
     ConnectedFilterType::Pointer neighborhoodConnected
             = ConnectedFilterType::New();
+
 
     int wight = src->GetLargestPossibleRegion().GetSize()[0];
     int height = src->GetLargestPossibleRegion().GetSize()[1];
@@ -94,6 +328,8 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
     typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
     MaskFilterType::Pointer maskFilter = MaskFilterType::New();
 
+
+
     thresholdFilter->SetInput(src);
     thresholdFilter->SetLowerThreshold(lowerThreshold);
     thresholdFilter->SetUpperThreshold(upperThreshold);
@@ -103,13 +339,16 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
     //return thresholdFilter->GetOutput();
     ImageType::Pointer dest = thresholdFilter->GetOutput();
 
+
     dest = removeBackground(dest);
     dest = lungSegementation(dest);
     dest = fileHoleInBinary(dest);
-    maskFilter->SetInput(src);
-    maskFilter->SetMaskImage(dest);
-    maskFilter->Update();
 
+    dest = convexHull(dest);
+    dest->SetSpacing(src->GetSpacing());
+     maskFilter->SetInput(src);
+     maskFilter->SetMaskImage(dest);
+     maskFilter->Update();
     return enhanceContrast(rescale(maskFilter->GetOutput()));
 }
 

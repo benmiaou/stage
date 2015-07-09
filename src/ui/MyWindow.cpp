@@ -58,7 +58,6 @@ void MyWindow::view3D(){
         QImage image_Qt = myLabel->pixmap()->toImage();
         if (!image_Qt.isNull()){
             viewer3D->creatScene(controller);
-
         }
     }
 }
