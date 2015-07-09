@@ -158,10 +158,10 @@ DICOMMManager::ImageType::Pointer  DICOMMManager::getConvexHull(ImageType::Point
                 dest->SetPixel(pixelIndex, 255);
 
                 if(nextPixelIndex[0]-(int)actualX != 0){
-                        actualX += (((nextPixelIndex[0]-(int)actualX))/abs((nextPixelIndex[0]-(int)actualX))) * ratioX;
+                    actualX += (((nextPixelIndex[0]-(int)actualX))/abs((nextPixelIndex[0]-(int)actualX))) * ratioX;
                 }
                 if(nextPixelIndex[1]-(int)actualY != 0){
-                        actualY += ((nextPixelIndex[1]-(int)actualY)/abs((int)actualY-nextPixelIndex[1])) *  ratioY;
+                    actualY += ((nextPixelIndex[1]-(int)actualY)/abs((int)actualY-nextPixelIndex[1])) *  ratioY;
                 }
             }
         }
@@ -182,8 +182,24 @@ DICOMMManager::ImageType::Pointer  DICOMMManager::getConvexHull(ImageType::Point
             nextPixelIndex[1] = j+1;
             int nextPixelValue = dest->GetPixel(nextPixelIndex);
 
-            if(pixelValue == 255 && nextPixelValue!=255)
-                isIn = !isIn;
+            if(pixelValue == 255 && nextPixelValue!=255){
+                if(isIn)
+                    isIn = false;
+                else
+                    for(unsigned int k = j+1; k < height-1; k++){
+                        ImageType::IndexType pixelIndex;
+                        pixelIndex[0] = i;
+                        pixelIndex[1] = k;
+                        int pixelValue = dest->GetPixel(pixelIndex);
+                        ImageType::IndexType nextPixelIndex;
+                        nextPixelIndex[0] = i;
+                        nextPixelIndex[1] = j+1;
+                        int nextPixelValue = dest->GetPixel(nextPixelIndex);
+                        if(pixelValue == 255 && nextPixelValue!=255)
+                            isIn = true;
+
+                    }
+            }
             if(isIn)
                 dest->SetPixel(pixelIndex,255);
         }
