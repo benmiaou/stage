@@ -2,8 +2,8 @@
 
 
 Install :
-- Requier QT4,ITK4.7
-- cmake -DITK_DIR="Path to IDK build"
+- Requier QT4,ITK4.7 DDGtal0.8
+- cmake -DITK_DIR="Path to IDK build" -DDGtal_DIR="Path to DGtal build"
 
 
 
@@ -17,10 +17,17 @@ Processing Menu :
  - Show Edges : show edges.
  - Enhance Contrast : try to enhance contrast of the image.
  - Show histogram : Show the 3D histogram of the serie in a new window.
-  - histogram window menu :
-    - Apply threshold : apply threshold with the selected value with the scroll bars.
-    - Show Threshold : Show the part of the histogram out of the thershold selection.
- -Show 3D View : Show 3D view of the current serie (use after threshold, only show pixel value > 220)
+  - histogram Preview menu :
+      - Preview Lung Segmentation : Preview the lung segmentation and the convex hull.
+      - Preview Simple Threshold : Preview of a simple treshold.
+  - histogram Apply menu :
+      - Apply Lung Segmentation : Apply the lung segmentation and the convex hull.
+      - Apply Simple Threshold : Apply of a simple treshold.
+  - histogram Histogram Type menu :
+      - Current 2D : Show histogram of the actual image.
+      - Total 2D : Show 2D histogram of the actual serie.
+      - 3D : Show 3D histogram of the actual serie.
+ -Show 3D View : Show 3D view of the current serie.
 
 Commands :
  - MouseWheel or ArrowKeys : switch image.

@@ -40,7 +40,7 @@ MyHistogram::MyHistogram(Controller *controller)
 
     QMenuBar *menuBar = new QMenuBar();
 
-    QMenu *processMenu =  menuBar->addMenu(tr("&Action"));
+    QMenu *processMenu =  menuBar->addMenu(tr("&Preview"));
     lungSegmentation = new QAction(tr("&Preview Lung Segmentation"), this);
     lungSegmentation->setStatusTip(tr("Preview Lung Segmentation"));
     lungSegmentation->setCheckable(true);
@@ -54,7 +54,7 @@ MyHistogram::MyHistogram(Controller *controller)
     processMenu->addAction(simpleThreshold);
 
 
-    QMenu *thresholdMenu =  menuBar->addMenu(tr("&Action"));
+    QMenu *thresholdMenu =  menuBar->addMenu(tr("&Apply"));
     applyLungSeg= new QAction(tr("&Apply Lung Segmentation"), this);
     applyLungSeg->setStatusTip(tr("Apply Lung Segmentation"));
     connect(applyLungSeg, SIGNAL(triggered()),this ,SLOT(applyLungSegmentation()));
