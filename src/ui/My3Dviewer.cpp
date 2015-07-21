@@ -27,7 +27,8 @@ void My3Dviewer::creatScene(Controller *controller)
     int num = 75;
     QImage image_Qt = controller->getDicom(num,1);
     while(!image_Qt.isNull() && num < 450){
-        std::cout << "3D Load "<< num << std::endl;
+        if(num %10 == 1)
+             std::cout << "Loading "<< (int)((num/450.0)*100) <<"%"<<std::endl;
         int wight = image_Qt.width();
         int height = image_Qt.height();
 
@@ -36,7 +37,7 @@ void My3Dviewer::creatScene(Controller *controller)
             {
 
                 QRgb color = image_Qt.pixel(i,j);
-                if(qGray(color) > 150){
+                if(qGray(color) > 10){
                     Point p = Point(i,j,num);
                     *viewer << p;
                     *viewer <<  CustomColors3D( Color(qGray(color),num%255,(i+j)%255), Color(qGray(color),num%255,(i+j)%255) );

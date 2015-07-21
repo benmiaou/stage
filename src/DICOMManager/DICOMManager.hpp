@@ -27,9 +27,13 @@ public :
     ImageType::Pointer  getEdges(ImageType::Pointer  src,int threshold);
     ImageType::Pointer enhanceSelectedRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
     ImageType::Pointer extractBronchiInRegion(ImageType::Pointer src ,int seedPosX,int seedPosY);
-    ImageType::Pointer threshold(ImageType::Pointer src, int upperThreshold, int lowerThreshold);
+    ImageType::Pointer lungSegmentation(ImageType::Pointer src, int upperThreshold, int lowerThreshold, bool edge);
+    ImageType::Pointer simpleThreshold(ImageType::Pointer src, int upperThreshold, int lowerThreshold, bool edge);
+    void applyLungSegmentation(int upperThreshold, int lowerThreshold);
+    void applySimpleThreshold(int upperThreshold, int lowerThreshold);
 
 private :
+    void addZone(ImageType::Pointer src, bool edge);
     ImageType::Pointer  getConvexHull(ImageType::Pointer src);
     ImageType::Pointer  convexHull(ImageType::Pointer src);
     ImageType::Pointer fileHoleInBinary(ImageType::Pointer src);
@@ -43,6 +47,7 @@ private :
     std::vector<ImageType::Pointer> getDICOMDirectory(std::string directoryName);
 
     std::vector<ImageType::Pointer> actualSerie;
+    std::vector<std::vector<ImageType::IndexType> > zoneToDraw;
 
 
 

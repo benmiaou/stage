@@ -41,7 +41,6 @@ MyWindow::MyWindow(Controller *controller)
 }
 
 
-
 void MyWindow::showHistogram(){
     if(myLabel->pixmap() != NULL){
         QImage image_Qt = myLabel->pixmap()->toImage();

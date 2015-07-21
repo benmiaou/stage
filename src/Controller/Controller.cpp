@@ -5,7 +5,7 @@
 
 Controller::Controller(){    
     mDicom = new DICOMMManager();
-    edge = zone = contrast = isActiveThreshold =false;
+    zoneEdge = edge = zone = contrast = isActiveLungSegmentation = isActiveSimpleThreshold = false;
     x1 = x2 = y1 = y2 = mouseX = mouseY = 0;
     threshold = 1;
     upperThreshold = 255;
@@ -16,10 +16,16 @@ Controller::Controller(){
 
 }
 
-void Controller::activeThreshold(bool isActive){
-    this->isActiveThreshold = isActive;
+void Controller::activeLungSegmentation(bool isActive){
+    this->isActiveLungSegmentation = isActive;
     ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
 }
+
+void Controller::activeSimpleThreshold(bool isActive){
+    this->isActiveSimpleThreshold = isActive;
+    ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
+}
+
 
 void Controller::changeThreshold (int thresholdModifier){
     if(thresholdModifier + threshold > 0)
@@ -34,7 +40,7 @@ void Controller::setThreshold(int max, int min){
     if(upperThreshold != max || lowerThreshold != min){
         upperThreshold = max;
         lowerThreshold = min;
-        if(isActiveThreshold)
+        if(isActiveLungSegmentation || isActiveSimpleThreshold)
             ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
     }
 }
@@ -76,7 +82,23 @@ void Controller::refreshZone(int x1, int y1, int x2, int y2){
     this->x2 = x2;
     this->y1 = y1;
     this->y2 = y2;
+}
 
+void Controller::applyLungSegmentation(){
+    mDicom->applyLungSegmentation(upperThreshold,lowerThreshold);
+    zoneEdge = edge = zone = contrast = isActiveLungSegmentation = isActiveSimpleThreshold = false;
+    ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
+}
+
+void Controller::applySimpleThreshold(){
+    mDicom->applySimpleThreshold(upperThreshold,lowerThreshold);
+    zoneEdge = edge = zone = contrast = isActiveLungSegmentation = isActiveSimpleThreshold = false;
+    ((MyWindow*)this->centralWidget())->refreshImage(numActualImage);
+}
+
+void Controller::getThresholdValues(int &max, int &min){
+    max = upperThreshold;
+    min = lowerThreshold;
 }
 
 void Controller::resetZoom(){
@@ -130,9 +152,12 @@ QImage Controller::getDicom(int num,float ratio){
             mItkImage = mDicom->enhanceContrast(mItkImage);
         if(edge)
             mItkImage = mDicom->getEdges(mItkImage,threshold);
-        if(isActiveThreshold)
+        if(isActiveLungSegmentation)
             if(upperThreshold != 255 || lowerThreshold!=0)
-                mItkImage = mDicom->threshold(mItkImage,upperThreshold,lowerThreshold);
+                mItkImage = mDicom->lungSegmentation(mItkImage,upperThreshold,lowerThreshold,zoneEdge);
+        if(isActiveSimpleThreshold)
+            if(upperThreshold != 255 || lowerThreshold!=0)
+                mItkImage = mDicom->simpleThreshold(mItkImage,upperThreshold,lowerThreshold,zoneEdge);
         numActualImage = num;
         return(mDicom->ITKImageToQImage(mItkImage));
     }

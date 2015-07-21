@@ -23,7 +23,7 @@ void MyHistogramLabel::paintEvent(QPaintEvent *event)
 {
     int maxValue = 0;
     int mardging = 10;
-    for(int i =0; i< histogram.size(); i++){
+    for(int i =1; i< histogram.size(); i++){
         if(histogram[i] > maxValue)
             maxValue = histogram[i];
     }
@@ -34,7 +34,7 @@ void MyHistogramLabel::paintEvent(QPaintEvent *event)
     if(!painter->isActive())
         painter->begin(this);
     painter->setRenderHint(QPainter::Antialiasing);
-    for(int i =0; i< histogram.size(); i++){
+    for(int i =1; i< histogram.size(); i++){
         if(i < max && i > min)
             painter->setPen(Qt::red);
         else

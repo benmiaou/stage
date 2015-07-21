@@ -41,14 +41,31 @@ MyHistogram::MyHistogram(Controller *controller)
     QMenuBar *menuBar = new QMenuBar();
 
     QMenu *processMenu =  menuBar->addMenu(tr("&Action"));
-    Threshold = new QAction(tr("&Apply Threshold"), this);
-    Threshold->setStatusTip(tr("Apply Threshold"));
-    Threshold->setCheckable(true);
-    connect(Threshold, SIGNAL(triggered()),this ,SLOT(activateThreshold()));
-    showThreshold= new QAction(tr("&Show Threshold"), this);
-    showThreshold->setStatusTip(tr("Show Threshold"));
-    showThreshold->setCheckable(true);
-    connect(showThreshold, SIGNAL(triggered()),this ,SLOT(update()));
+    lungSegmentation = new QAction(tr("&Preview Lung Segmentation"), this);
+    lungSegmentation->setStatusTip(tr("Preview Lung Segmentation"));
+    lungSegmentation->setCheckable(true);
+    connect(lungSegmentation, SIGNAL(triggered()),this ,SLOT(activateLungSegmentation()));
+    processMenu->addAction(lungSegmentation);
+
+    simpleThreshold = new QAction(tr("&Preview Simple Threshold"), this);
+    simpleThreshold->setStatusTip(tr("Preview Simple Threshold"));
+    simpleThreshold->setCheckable(true);
+    connect(simpleThreshold, SIGNAL(triggered()),this ,SLOT(activateSimpleThreshold()));
+    processMenu->addAction(simpleThreshold);
+
+
+    QMenu *thresholdMenu =  menuBar->addMenu(tr("&Action"));
+    applyLungSeg= new QAction(tr("&Apply Lung Segmentation"), this);
+    applyLungSeg->setStatusTip(tr("Apply Lung Segmentation"));
+    connect(applyLungSeg, SIGNAL(triggered()),this ,SLOT(applyLungSegmentation()));
+    thresholdMenu->addAction(applyLungSeg);
+
+    applySimpleThresh= new QAction(tr("&Apply Simple Threshold"), this);
+    applySimpleThresh->setStatusTip(tr("Apply Simple Threshold"));
+    connect(applySimpleThresh, SIGNAL(triggered()),this ,SLOT(applySimpleThreshold()));
+    thresholdMenu->addAction(applySimpleThresh);
+
+
 
     QMenu *histogramMenu =  menuBar->addMenu(tr("&Histogram Type"));
     QActionGroup* histogramType = new QActionGroup(this);
@@ -71,16 +88,33 @@ MyHistogram::MyHistogram(Controller *controller)
 
     histogramMenu->addActions(histogramType->actions());
 
-    processMenu->addAction(Threshold);
-    processMenu->addAction(showThreshold);
+
+
     this->setMenuBar(menuBar);
 
 
 }
+void MyHistogram::applyLungSegmentation(){
+    lungSegmentation->setChecked(false);
+    controller->activeLungSegmentation(lungSegmentation->isChecked());
+    controller->applyLungSegmentation();
+    updateHistogram();
+}
 
+void MyHistogram::activateLungSegmentation(){
+    controller->activeLungSegmentation(lungSegmentation->isChecked());
+    this->update();
+}
 
-void MyHistogram::activateThreshold(){
-    controller->activeThreshold(Threshold->isChecked());
+void MyHistogram::applySimpleThreshold(){
+    simpleThreshold->setChecked(false);
+    controller->activeSimpleThreshold(simpleThreshold->isChecked());
+    controller->applySimpleThreshold();
+    updateHistogram();
+}
+
+void MyHistogram::activateSimpleThreshold(){
+    controller->activeSimpleThreshold(simpleThreshold->isChecked());
     this->update();
 }
 
@@ -95,8 +129,7 @@ void MyHistogram::update3D(){
     for(int i=0; i<histograms.size() ; i++)
         for(int j=0; j<histograms[i].size(); j++){
             bool draw = false;
-            if(showThreshold->isChecked())
-                draw = true;
+            draw = true;
             Point pBL = Point(j,0,i);
             Point pTL = Point(j,(histograms[i][j]/100)+1,i);
             if(j > minVal && j < maxVal){
@@ -114,6 +147,9 @@ void MyHistogram::update3D(){
 
 void MyHistogram::paintEvent(QPaintEvent *event)
 {
+    int upper = 255;
+    int lower = 0;
+    controller->getThresholdValues(upper,lower);
     int minVal = scrollBarMin->value();
     int maxVal = scrollBarMax->value();
     if(minVal != actualLower)
@@ -136,7 +172,7 @@ void MyHistogram::paintEvent(QPaintEvent *event)
         if(histogramType1->isChecked())
             histogram = histograms[controller->getCurrent()];
         else{
-            for(int j=0; j<histograms[0].size(); j++)
+            for(int j=1; j<histograms[0].size(); j++)
                 for(int i=0; i<histograms.size() ; i++){
                     if(histogram.size() > j)
                         histogram[j] += histograms[i][j];

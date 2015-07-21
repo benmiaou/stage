@@ -347,8 +347,92 @@ DICOMMManager::ImageType::Pointer  DICOMMManager::removeBackground(ImageType::Po
     return src;
 }
 
+void DICOMMManager::applySimpleThreshold(int upperThreshold, int lowerThreshold){
+    typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
+            BinaryThresholdImageFilterType;
+    typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
+    for(int i = 0; i < actualSerie.size(); i++){
+        BinaryThresholdImageFilterType::Pointer thresholdFilter
+                = BinaryThresholdImageFilterType::New();
+        MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+        if(i%10 == 0)
+        std::cout << "Processing " << (int)(((float)i/actualSerie.size())*100) << "%" << std::endl;
+        thresholdFilter->SetInput(actualSerie[i]);
+        thresholdFilter->SetLowerThreshold(lowerThreshold);
+        thresholdFilter->SetUpperThreshold(upperThreshold);
+        thresholdFilter->SetInsideValue(255);
+        thresholdFilter->SetOutsideValue(0);
+        thresholdFilter->Update();
+        ImageType::Pointer dest = thresholdFilter->GetOutput();
+        maskFilter->SetInput(actualSerie[i]);
+        maskFilter->SetMaskImage(dest);
+        maskFilter->Update();
+        actualSerie[i] = maskFilter->GetOutput();
 
-DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer src , int upperThreshold, int lowerThreshold){
+    }
+
+}
+
+void DICOMMManager::applyLungSegmentation(int upperThreshold, int lowerThreshold){
+    typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
+            BinaryThresholdImageFilterType;
+    typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
+
+
+
+    for(int i = 0; i < actualSerie.size(); i++){
+        BinaryThresholdImageFilterType::Pointer thresholdFilter
+                = BinaryThresholdImageFilterType::New();
+        MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+        if(i%10 == 0)
+        std::cout << "Processing " << (int)(((float)i/actualSerie.size())*100) << "%" << std::endl;
+        thresholdFilter->SetInput(actualSerie[i]);
+        thresholdFilter->SetLowerThreshold(lowerThreshold);
+        thresholdFilter->SetUpperThreshold(upperThreshold);
+        thresholdFilter->SetInsideValue(255);
+        thresholdFilter->SetOutsideValue(0);
+        thresholdFilter->Update();
+        //return thresholdFilter->GetOutput();
+        ImageType::Pointer dest = thresholdFilter->GetOutput();
+
+
+        dest = removeBackground(dest);
+        dest = lungSegementation(dest);
+        dest = fileHoleInBinary(dest);
+        //dest = convexHull(dest);
+        //dest->SetSpacing(actualSerie[i]->GetSpacing());
+        maskFilter->SetInput(actualSerie[i]);
+        maskFilter->SetMaskImage(dest);
+        maskFilter->Update();
+        actualSerie[i] = maskFilter->GetOutput();
+
+    }
+
+}
+
+void DICOMMManager::addZone(ImageType::Pointer src, bool edge){
+    ImageType::Pointer dest = src;
+    if (edge)
+        dest = getEdges(src,5);
+    int wight = dest->GetLargestPossibleRegion().GetSize()[0];
+    int height = dest->GetLargestPossibleRegion().GetSize()[1];
+    std::vector<ImageType::IndexType> pixelsIndex;
+    for(unsigned int i = 0; i <wight; i++)
+        for(unsigned int j = 0; j < height; j++)
+        {
+            ImageType::IndexType pixelIndex;
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            int pixelValue = dest->GetPixel(pixelIndex);
+            if(pixelValue == 255)
+                pixelsIndex.push_back(pixelIndex);
+        }
+    zoneToDraw.push_back(pixelsIndex);
+
+
+}
+
+DICOMMManager::ImageType::Pointer DICOMMManager::lungSegmentation(ImageType::Pointer src , int upperThreshold, int lowerThreshold, bool edge){
     typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
             BinaryThresholdImageFilterType;
     BinaryThresholdImageFilterType::Pointer thresholdFilter
@@ -371,13 +455,34 @@ DICOMMManager::ImageType::Pointer DICOMMManager::threshold(ImageType::Pointer sr
     dest = removeBackground(dest);
     dest = lungSegementation(dest);
     dest = fileHoleInBinary(dest);
-
+    addZone(dest,edge);
     dest = convexHull(dest);
-    dest->SetSpacing(src->GetSpacing());
-    maskFilter->SetInput(src);
-    maskFilter->SetMaskImage(dest);
-    maskFilter->Update();
-    return enhanceContrast(rescale(maskFilter->GetOutput()));
+    addZone(dest,edge);
+    return src;
+}
+
+DICOMMManager::ImageType::Pointer DICOMMManager::simpleThreshold(ImageType::Pointer src, int upperThreshold, int lowerThreshold, bool edge){
+    typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
+            BinaryThresholdImageFilterType;
+    BinaryThresholdImageFilterType::Pointer thresholdFilter
+            = BinaryThresholdImageFilterType::New();
+    typedef itk::MaskImageFilter< ImageType, ImageType > MaskFilterType;
+    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+
+
+
+    thresholdFilter->SetInput(src);
+    thresholdFilter->SetLowerThreshold(lowerThreshold);
+    thresholdFilter->SetUpperThreshold(upperThreshold);
+    thresholdFilter->SetInsideValue(255);
+    thresholdFilter->SetOutsideValue(0);
+    thresholdFilter->Update();
+
+    ImageType::Pointer dest = thresholdFilter->GetOutput();
+    addZone(dest,edge);
+    dest = convexHull(dest);
+    addZone(dest,edge);
+    return src;
 }
 
 
@@ -443,6 +548,15 @@ QImage DICOMMManager::ITKImageToQImage(ImageType::Pointer myITKImage){
         }
 
     }
+    for(int i =0; i < zoneToDraw.size(); i++)
+        for(int j = 0; j< zoneToDraw[i].size(); j++){
+            ImageType::IndexType pixelIndex = zoneToDraw[i][j];
+            int pixelValue = myITKImage->GetPixel(pixelIndex);
+            QRgb value = qRgb(64,128,255);
+            value +=  image_Qt.pixel(pixelIndex[0],pixelIndex[1]);
+            image_Qt.setPixel(pixelIndex[0],pixelIndex[1], value );
+        }
+    zoneToDraw.clear();
     return image_Qt;
 }
 
@@ -934,7 +1048,8 @@ void DICOMMManager::loadDICOMSerie(std::string seriesIdentifier,
     actualSerie.clear();
     actualSerie = std::vector<ImageType::Pointer>();
     for (int i =0; i< fileNames.size(); i++){
-        std::cout << fileNames[i] << std::endl;
+        if(i%10 == 0)
+            std::cout<<"Loading " << (int)(((float)i/fileNames.size())*100) <<"%" <<std::endl;
         reader->SetFileName(fileNames[i]);
         //----------------------------
         reader->SetImageIO( dicomIO );

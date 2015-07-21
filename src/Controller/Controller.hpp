@@ -13,6 +13,7 @@ class Controller : public QMainWindow
 {
  public :
     Controller();
+    bool zoneEdge;
     void refreshZoom(double zoomModifier, int posX,int posY);
     void changeThreshold (int newThreshold);
     void refreshBool(bool edge, bool zone ,bool contrast, bool selectRegion, bool selectBronchi);
@@ -24,10 +25,14 @@ class Controller : public QMainWindow
     void resetZoom();
     void setThreshold(int max, int min);
     bool isNeedingRefresh();
-    void activeThreshold(bool isActive);
+    void activeLungSegmentation(bool isActive);
+    void activeSimpleThreshold(bool isActive);
     QImage getDicom(int num,float ratio);
     std::vector< std::vector<int> > getHistograms();
     int getCurrent();
+    void applyLungSegmentation();
+    void applySimpleThreshold();
+    void getThresholdValues(int &max, int &min);
 
  protected :
 
@@ -41,7 +46,8 @@ class Controller : public QMainWindow
      bool contrast;
      bool selectRegion;
      bool selectBronchi;
-     bool isActiveThreshold;
+     bool isActiveLungSegmentation;
+     bool isActiveSimpleThreshold;
      int x1,x2,y1,y2;
      int mouseX;
      int mouseY;

@@ -27,8 +27,10 @@ protected:
     MyScrollBar *scrollBarMin;
     MyScrollBar *scrollBarMax;
     QPainter *painter;
-    QAction *Threshold;
-    QAction *showThreshold;
+    QAction *lungSegmentation;
+    QAction *applyLungSeg;
+    QAction *simpleThreshold;
+    QAction *applySimpleThresh;
     QAction *histogramType1;
     QAction *histogramType2;
     QAction *histogramType3;
@@ -38,7 +40,10 @@ protected:
     void closeEvent(QCloseEvent *event);
     void update3D();
 private slots :
-    void activateThreshold();
+    void activateLungSegmentation();
+    void applyLungSegmentation();
+    void activateSimpleThreshold();
+    void applySimpleThreshold();
 };
 
 #endif // MYHISTOGRAM_HPP
