@@ -27,7 +27,7 @@ Processing Menu :
       - Current 2D : Show histogram of the actual image.
       - Total 2D : Show 2D histogram of the actual serie.
       - 3D : Show 3D histogram of the actual serie.
- -Show 3D View : Show 3D view of the current serie.
+ - Show 3D View : Show 3D view of the current serie.
 
 Commands :
  - MouseWheel or ArrowKeys : switch image.
